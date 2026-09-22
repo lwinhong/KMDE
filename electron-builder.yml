@@ -1,0 +1,28 @@
+appId: com.liyk.kmde
+productName: KMDE
+directories:
+  buildResources: resources
+  output: dist
+files:
+  - out/**
+  - package.json
+asarUnpack:
+  - resources/**
+win:
+  target:
+    - nsis
+  fileAssociations:
+    - ext: md
+      name: Markdown Document
+      description: Markdown 文档
+      role: Editor
+    - ext: markdown
+      name: Markdown Document
+      description: Markdown 文档
+      role: Editor
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  perMachine: false
+  shortcutName: KMDE
+  artifactName: ${productName}-${version}-setup.${ext}

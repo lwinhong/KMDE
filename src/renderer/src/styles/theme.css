@@ -1,0 +1,133 @@
+/* ============================================================
+   KMDE theme variables (light / dark)
+   - --kme-* : KMDE semantic variables
+   - --el-*  : Element Plus compatibility layer, so migrated
+     tiptap styles (notion-editor.css / toolbar.css) work
+     without modification
+   ============================================================ */
+
+:root {
+  --kme-primary: #2563eb;
+  --kme-primary-hover: #3b82f6;
+  --kme-primary-weak: rgba(37, 99, 235, 0.08);
+  --kme-bg: #ffffff;
+  --kme-bg-soft: #f7f8fa;
+  --kme-bg-sidebar: #f2f3f5;
+  --kme-bg-hover: rgba(0, 0, 0, 0.045);
+  --kme-bg-active: rgba(0, 0, 0, 0.075);
+  --kme-text-1: #1f2329;
+  --kme-text-2: #4e5969;
+  --kme-text-3: #86909c;
+  --kme-border: #e5e6eb;
+  --kme-border-light: #eff0f2;
+  --kme-danger: #e5484d;
+  --kme-success: #30a46c;
+  --kme-warning: #f59e0b;
+  --kme-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  --kme-shadow-light: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --kme-code-bg: #f6f8fa;
+  --kme-code-text: #24292f;
+  --kme-popover-bg: #ffffff;
+  --kme-tabbar-bg: #f2f3f5;
+
+  /* Element Plus compatibility layer */
+  --el-color-primary: var(--kme-primary);
+  --el-color-primary-light-3: var(--kme-primary-hover);
+  --el-color-primary-light-9: var(--kme-primary-weak);
+  --el-color-danger: var(--kme-danger);
+  --el-color-danger-light-9: rgba(229, 72, 77, 0.08);
+  --el-color-success: var(--kme-success);
+  --el-color-white: #ffffff;
+  --el-color-black: #000000;
+  --el-text-color-primary: var(--kme-text-1);
+  --el-text-color-regular: var(--kme-text-2);
+  --el-text-color-secondary: var(--kme-text-3);
+  --el-text-color-placeholder: #a9aeb8;
+  --el-border-color: var(--kme-border);
+  --el-border-color-lighter: var(--kme-border-light);
+  --el-fill-color: rgba(0, 0, 0, 0.04);
+  --el-fill-color-light: rgba(0, 0, 0, 0.03);
+  --el-fill-color-lighter: rgba(0, 0, 0, 0.025);
+  --el-bg-color: var(--kme-bg);
+  --el-box-shadow-light: var(--kme-shadow-light);
+}
+
+:root.dark {
+  --kme-primary: #60a5fa;
+  --kme-primary-hover: #93c5fd;
+  --kme-primary-weak: rgba(96, 165, 250, 0.12);
+  --kme-bg: #1e2128;
+  --kme-bg-soft: #24272f;
+  --kme-bg-sidebar: #191c22;
+  --kme-bg-hover: rgba(255, 255, 255, 0.05);
+  --kme-bg-active: rgba(255, 255, 255, 0.09);
+  --kme-text-1: #e8eaed;
+  --kme-text-2: #b4b9c2;
+  --kme-text-3: #7d838e;
+  --kme-border: #33373f;
+  --kme-border-light: #2b2f36;
+  --kme-danger: #f16b6f;
+  --kme-success: #4ade80;
+  --kme-warning: #fbbf24;
+  --kme-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --kme-shadow-light: 0 2px 8px rgba(0, 0, 0, 0.35);
+  --kme-code-bg: #26292f;
+  --kme-code-text: #d8dee8;
+  --kme-popover-bg: #26292f;
+  --kme-tabbar-bg: #191c22;
+
+  --el-color-white: #ffffff;
+  --el-text-color-placeholder: #5c6370;
+  --el-fill-color: rgba(255, 255, 255, 0.06);
+  --el-fill-color-light: rgba(255, 255, 255, 0.045);
+  --el-fill-color-lighter: rgba(255, 255, 255, 0.03);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  color: var(--kme-text-1);
+  background: var(--kme-bg);
+}
+
+#app {
+  height: 100%;
+}
+
+code,
+pre,
+kbd {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', Consolas, 'Courier New', monospace;
+}
+
+/* scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(128, 134, 145, 0.35);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(128, 134, 145, 0.6);
+}
