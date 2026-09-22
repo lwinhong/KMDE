@@ -125,6 +125,7 @@ export default {
   editor: {
     backToEditor: 'Back to Editor',
     viewSource: 'View Markdown Source',
+    more: 'More Tools',
     blockquote: 'Blockquote',
     codeBlock: 'Code Block',
     inlineCode: 'Inline Code',

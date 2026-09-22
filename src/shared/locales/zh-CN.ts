@@ -123,6 +123,7 @@ export default {
   editor: {
     backToEditor: '返回编辑器',
     viewSource: '查看 Markdown 源码',
+    more: '更多工具',
     blockquote: '引用',
     codeBlock: '代码块',
     inlineCode: '行内代码',

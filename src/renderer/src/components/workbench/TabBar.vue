@@ -43,12 +43,12 @@ function onAuxClick(e: MouseEvent, id: string): void {
         @click="onTabClick(tab.id)"
         @auxclick="onAuxClick($event, tab.id)"
       >
-        <span class="tabbar-tab-icon"><MarkdownIcon :size="13" /></span>
+        <span class="tabbar-tab-icon"><MarkdownIcon :size="14" /></span>
         <span class="tabbar-tab-label">
           {{ tab.fileName }}
           <span v-if="tab.deleted" class="tabbar-tab-deleted">{{ $t('tabbar.deleted') }}</span>
         </span>
-        <span class="tabbar-tab-dot" :class="{ 'is-dirty': tab.dirty }" />
+        <span class="tabbar-tab-dot" v-if="tab.dirty" :class="{ 'is-dirty': tab.dirty }" />
         <button class="tabbar-tab-close" :title="$t('common.close')" @click="onTabClose($event, tab.id)">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5">
             <path d="M22 2 2 22 M2 2l20 20" />
@@ -106,8 +106,8 @@ function onAuxClick(e: MouseEvent, id: string): void {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 0 10px;
-  margin: 5px 2px;
+  padding: 0 4px;
+  margin: 5px 3px;
   height: 28px;
   min-width: 120px;
   max-width: 220px;
@@ -125,9 +125,20 @@ function onAuxClick(e: MouseEvent, id: string): void {
 }
 
 .tabbar-tab.is-active {
-  background: var(--kme-bg);
+  background: var(--kme-tab-active-bg);
   color: var(--kme-text-1);
-  box-shadow: var(--kme-shadow-xs);
+  box-shadow: var(--kme-tab-active-shadow);
+}
+
+.tabbar-tab.is-active::after {
+  content: '';
+  position: absolute;
+  top: 0px;
+  left: 10px;
+  right: 10px;
+  height: 1px;
+  border-radius: var(--kme-radius-full);
+  background: var(--kme-tab-active-indicator);
 }
 
 .tabbar-tab-icon {

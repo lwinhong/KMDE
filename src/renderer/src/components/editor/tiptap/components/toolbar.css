@@ -16,7 +16,7 @@
   -webkit-backdrop-filter: blur(var(--kme-blur)) saturate(1.4);
 }
 
-.tiptap-toolbar.source-mode > :not(.md-toggle-btn):not(.tiptap-separator) {
+.tiptap-toolbar.source-mode .toolbar-item:not(.is-source-toggle) {
   opacity: 0.35;
   pointer-events: none;
 }
@@ -24,6 +24,60 @@
 .md-toggle-btn {
   position: relative;
   z-index: 2;
+}
+
+.toolbar-item {
+  display: flex;
+  align-items: center;
+}
+
+.toolbar-measure-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  visibility: hidden;
+  pointer-events: none;
+  width: max-content;
+}
+
+.toolbar-measure-item {
+  display: flex;
+  align-items: center;
+}
+
+.more-btn {
+  flex-shrink: 0;
+}
+
+.toolbar-overflow-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  min-width: 220px;
+}
+
+.toolbar-overflow-menu.source-mode .overflow-item:not(.is-source-toggle) {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.overflow-item {
+  display: flex;
+  align-items: center;
+}
+
+.overflow-item .tiptap-toolbar-group {
+  width: 100%;
+}
+
+.overflow-divider {
+  height: 1px;
+  background: var(--kme-border-light);
+  margin: 6px 2px;
 }
 .dark .tiptap-toolbar {
   background: var(--kme-glass-bg);

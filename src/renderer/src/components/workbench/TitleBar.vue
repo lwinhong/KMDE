@@ -181,19 +181,19 @@ function onMenuSelect(key: string | number): void {
 
     <div class="title-bar-controls">
       <button class="title-bar-ctl" :title="$t('workbench.minimize')" @click="minimize">
-        <svg width="11" height="11" viewBox="0 0 11 11"><path d="M1 5.5 h9" stroke="currentColor" stroke-width="1" /></svg>
+        <svg width="12" height="12" viewBox="0 0 11 11"><path d="M1 5.5 h9" stroke="currentColor" stroke-width="1" /></svg>
       </button>
       <button class="title-bar-ctl" :title="maximized ? $t('workbench.restore') : $t('workbench.maximize')" @click="toggleMaximize">
-        <svg v-if="!maximized" width="11" height="11" viewBox="0 0 11 11">
+        <svg v-if="!maximized" width="12" height="12" viewBox="0 0 11 11">
           <rect x="1.5" y="1.5" width="8" height="8" fill="none" stroke="currentColor" stroke-width="1" />
         </svg>
-        <svg v-else width="11" height="11" viewBox="0 0 11 11">
+        <svg v-else width="12" height="12" viewBox="0 0 11 11">
           <rect x="1.5" y="3.5" width="6" height="6" fill="none" stroke="currentColor" stroke-width="1" />
           <path d="M3.5 3.5 V1.5 h6 v6 h-2" fill="none" stroke="currentColor" stroke-width="1" />
         </svg>
       </button>
       <button class="title-bar-ctl title-bar-close" :title="$t('common.close')" @click="requestClose">
-        <svg width="11" height="11" viewBox="0 0 11 11">
+        <svg width="12" height="12" viewBox="0 0 11 11">
           <path d="M1.5 1.5 L9.5 9.5 M9.5 1.5 L1.5 9.5" stroke="currentColor" stroke-width="1.1" />
         </svg>
       </button>
