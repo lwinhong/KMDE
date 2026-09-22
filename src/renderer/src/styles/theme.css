@@ -1,88 +1,131 @@
 /* ============================================================
    KMDE theme variables (light / dark)
    - --kme-* : KMDE semantic variables
-   - --el-*  : Element Plus compatibility layer, so migrated
-     tiptap styles (notion-editor.css / toolbar.css) work
-     without modification
+   - 设计风格参考 Trae SOLO：极简留白、紫色品牌色、大圆角、
+     柔和阴影、浮层玻璃拟态
    ============================================================ */
 
 :root {
-  --kme-primary: #2563eb;
-  --kme-primary-hover: #3b82f6;
-  --kme-primary-weak: rgba(37, 99, 235, 0.08);
+  /* 主色（Trae 紫） */
+  --kme-primary: #6366f1;
+  --kme-primary-hover: #818cf8;
+  --kme-primary-active: #4f46e5;
+  --kme-primary-weak: rgba(99, 102, 241, 0.09);
+  --kme-primary-weak-hover: rgba(99, 102, 241, 0.14);
+
+  /* 辅助色 + 渐变（细腻点缀用） */
+  --kme-accent-1: #8b5cf6;
+  --kme-accent-2: #ec4899;
+  --kme-gradient-brand: linear-gradient(135deg, #6366f1, #8b5cf6);
+  --kme-gradient-text: linear-gradient(120deg, #6366f1, #8b5cf6 55%, #ec4899);
+
+  /* 背景五层 */
   --kme-bg: #ffffff;
-  --kme-bg-soft: #f7f8fa;
-  --kme-bg-sidebar: #f2f3f5;
-  --kme-bg-hover: rgba(0, 0, 0, 0.045);
-  --kme-bg-active: rgba(0, 0, 0, 0.075);
-  --kme-text-1: #1f2329;
-  --kme-text-2: #4e5969;
-  --kme-text-3: #86909c;
-  --kme-border: #e5e6eb;
-  --kme-border-light: #eff0f2;
-  --kme-danger: #e5484d;
-  --kme-success: #30a46c;
+  --kme-bg-soft: #fafafb;
+  --kme-bg-sidebar: #f7f7f9;
+  --kme-bg-inset: #f2f2f5;
+  --kme-bg-raised: #ffffff;
+
+  /* 交互态 */
+  --kme-bg-hover: rgba(24, 24, 27, 0.045);
+  --kme-bg-active: rgba(24, 24, 27, 0.075);
+
+  /* 文字三级 */
+  --kme-text-1: #18181b;
+  --kme-text-2: #52525b;
+  --kme-text-3: #a1a1aa;
+
+  /* 边框三级 */
+  --kme-border: #e8e8ec;
+  --kme-border-light: #f0f0f3;
+  --kme-border-strong: #d4d4d8;
+
+  /* 状态色 */
+  --kme-danger: #ef4444;
+  --kme-danger-close: #e81123;
+  --kme-success: #10b981;
   --kme-warning: #f59e0b;
-  --kme-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-  --kme-shadow-light: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --kme-selection: rgba(99, 102, 241, 0.18);
+
+  /* 圆角 token */
+  --kme-radius-xs: 4px;
+  --kme-radius-sm: 6px;
+  --kme-radius-md: 8px;
+  --kme-radius-lg: 10px;
+  --kme-radius-xl: 14px;
+  --kme-radius-full: 999px;
+
+  /* 阴影 token */
+  --kme-shadow-xs: 0 1px 2px rgba(24, 24, 27, 0.05);
+  --kme-shadow-sm: 0 2px 8px rgba(24, 24, 27, 0.06);
+  --kme-shadow-md: 0 4px 16px rgba(24, 24, 27, 0.08);
+  --kme-shadow-lg: 0 12px 40px rgba(24, 24, 27, 0.12);
+  --kme-shadow-glow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+  --kme-shadow-light: var(--kme-shadow-sm);
+  --kme-shadow: var(--kme-shadow-md);
+
+  /* 玻璃拟态 */
+  --kme-glass-bg: rgba(255, 255, 255, 0.86);
+  --kme-blur: 20px;
+
+  /* 浮层 */
+  --kme-bg-float: #ffffff;
+  --kme-popover-bg: #ffffff;
+  --kme-tabbar-bg: var(--kme-bg-inset);
+
+  /* 代码块 */
   --kme-code-bg: #f6f8fa;
   --kme-code-text: #24292f;
-  --kme-popover-bg: #ffffff;
-  --kme-bg-float: #ffffff;
-  --kme-tabbar-bg: #f2f3f5;
-
-  /* Element Plus compatibility layer */
-  --el-color-primary: var(--kme-primary);
-  --el-color-primary-light-3: var(--kme-primary-hover);
-  --el-color-primary-light-9: var(--kme-primary-weak);
-  --el-color-danger: var(--kme-danger);
-  --el-color-danger-light-9: rgba(229, 72, 77, 0.08);
-  --el-color-success: var(--kme-success);
-  --el-color-white: #ffffff;
-  --el-color-black: #000000;
-  --el-text-color-primary: var(--kme-text-1);
-  --el-text-color-regular: var(--kme-text-2);
-  --el-text-color-secondary: var(--kme-text-3);
-  --el-text-color-placeholder: #a9aeb8;
-  --el-border-color: var(--kme-border);
-  --el-border-color-lighter: var(--kme-border-light);
-  --el-fill-color: rgba(0, 0, 0, 0.04);
-  --el-fill-color-light: rgba(0, 0, 0, 0.03);
-  --el-fill-color-lighter: rgba(0, 0, 0, 0.025);
-  --el-bg-color: var(--kme-bg);
-  --el-box-shadow-light: var(--kme-shadow-light);
 }
 
 :root.dark {
-  --kme-primary: #60a5fa;
-  --kme-primary-hover: #93c5fd;
-  --kme-primary-weak: rgba(96, 165, 250, 0.12);
-  --kme-bg: #1e2128;
-  --kme-bg-soft: #24272f;
-  --kme-bg-sidebar: #191c22;
+  --kme-primary: #818cf8;
+  --kme-primary-hover: #a5b4fc;
+  --kme-primary-active: #6366f1;
+  --kme-primary-weak: rgba(129, 140, 248, 0.16);
+  --kme-primary-weak-hover: rgba(129, 140, 248, 0.22);
+
+  --kme-accent-1: #a78bfa;
+  --kme-accent-2: #f472b6;
+  --kme-gradient-brand: linear-gradient(135deg, #818cf8, #a78bfa);
+  --kme-gradient-text: linear-gradient(120deg, #a5b4fc, #a78bfa 55%, #f472b6);
+
+  --kme-bg: #131318;
+  --kme-bg-soft: #1a1a20;
+  --kme-bg-sidebar: #101014;
+  --kme-bg-inset: #26262e;
+  --kme-bg-raised: #1e1e26;
+
   --kme-bg-hover: rgba(255, 255, 255, 0.05);
   --kme-bg-active: rgba(255, 255, 255, 0.09);
-  --kme-text-1: #e8eaed;
-  --kme-text-2: #b4b9c2;
-  --kme-text-3: #7d838e;
-  --kme-border: #33373f;
-  --kme-border-light: #2b2f36;
-  --kme-danger: #f16b6f;
-  --kme-success: #4ade80;
-  --kme-warning: #fbbf24;
-  --kme-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-  --kme-shadow-light: 0 2px 8px rgba(0, 0, 0, 0.35);
-  --kme-code-bg: #26292f;
-  --kme-code-text: #d8dee8;
-  --kme-popover-bg: #26292f;
-  --kme-bg-float: #26292f;
-  --kme-tabbar-bg: #191c22;
 
-  --el-color-white: #ffffff;
-  --el-text-color-placeholder: #5c6370;
-  --el-fill-color: rgba(255, 255, 255, 0.06);
-  --el-fill-color-light: rgba(255, 255, 255, 0.045);
-  --el-fill-color-lighter: rgba(255, 255, 255, 0.03);
+  --kme-text-1: #ececf1;
+  --kme-text-2: #b4b4c0;
+  --kme-text-3: #71717a;
+
+  --kme-border: #2a2a33;
+  --kme-border-light: #232329;
+  --kme-border-strong: #3a3a45;
+
+  --kme-danger: #f87171;
+  --kme-danger-close: #c62a2f;
+  --kme-success: #34d399;
+  --kme-warning: #fbbf24;
+  --kme-selection: rgba(129, 140, 248, 0.28);
+
+  --kme-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --kme-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.35);
+  --kme-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --kme-shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.5);
+  --kme-shadow-glow: 0 0 0 3px rgba(129, 140, 248, 0.2);
+
+  --kme-glass-bg: rgba(30, 30, 38, 0.85);
+
+  --kme-code-bg: #1e1e26;
+  --kme-code-text: #d8dee8;
+  --kme-bg-float: #1e1e26;
+  --kme-popover-bg: #22222b;
+  --kme-tabbar-bg: #101014;
 }
 
 * {
@@ -115,6 +158,10 @@ kbd {
   font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', Consolas, 'Courier New', monospace;
 }
 
+::selection {
+  background: var(--kme-selection);
+}
+
 /* scrollbars */
 ::-webkit-scrollbar {
   width: 8px;
@@ -127,7 +174,7 @@ kbd {
 
 ::-webkit-scrollbar-thumb {
   background: rgba(128, 134, 145, 0.35);
-  border-radius: 4px;
+  border-radius: var(--kme-radius-full);
 }
 
 ::-webkit-scrollbar-thumb:hover {

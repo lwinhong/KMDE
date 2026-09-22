@@ -111,7 +111,7 @@ const doInsertTable = (close, rows, cols) => {
 
 .table-grid-label {
   font-size: 12px;
-  color: var(--el-text-color-secondary);
+  color: var(--kme-text-3);
   text-align: center;
   margin-bottom: 6px;
   min-height: 18px;
@@ -131,15 +131,15 @@ const doInsertTable = (close, rows, cols) => {
 .table-grid-cell {
   width: 14px;
   height: 14px;
-  border: 1px solid var(--el-border-color-lighter);
+  border: 1px solid var(--kme-border-light);
   border-radius: 2px;
-  background: var(--el-fill-color-lighter);
+  background: var(--kme-bg-soft);
   cursor: pointer;
   transition: all 0.1s;
 }
 
 .table-grid-cell.is-highlighted {
-  background: var(--el-color-primary);
-  border-color: var(--el-color-primary);
+  background: var(--kme-primary);
+  border-color: var(--kme-primary);
 }
 </style>

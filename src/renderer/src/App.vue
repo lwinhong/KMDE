@@ -23,10 +23,11 @@ onMounted(() => {
     :date-locale="naiveDateLocale"
     :theme-overrides="{
       common: {
-        primaryColor: settings.isDark ? '#60a5fa' : '#2563eb',
-        primaryColorHover: settings.isDark ? '#93c5fd' : '#3b82f6',
-        primaryColorPressed: settings.isDark ? '#3b82f6' : '#1d4ed8',
-        borderRadius: '6px'
+        primaryColor: settings.isDark ? '#818cf8' : '#6366f1',
+        primaryColorHover: settings.isDark ? '#a5b4fc' : '#818cf8',
+        primaryColorPressed: settings.isDark ? '#6366f1' : '#4f46e5',
+        primaryColorSuppl: settings.isDark ? '#818cf8' : '#6366f1',
+        borderRadius: '8px'
       }
     }"
     style="height: 100%"

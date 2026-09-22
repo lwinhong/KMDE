@@ -130,11 +130,11 @@ const doConfirm = (close) => {
   content: '';
   flex: 1;
   height: 1px;
-  background: var(--el-border-color-lighter, #ebeef5);
+  background: var(--kme-border-light);
 }
 
 .image-form-divider-text {
-  color: var(--el-text-color-placeholder, #a8abb2);
+  color: var(--kme-text-3);
   font-size: 12px;
 }
 

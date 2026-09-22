@@ -157,10 +157,10 @@ function onMenuSelect(key: string | number): void {
     <div class="title-bar-left">
       <div class="title-bar-logo">
         <svg width="16" height="16" viewBox="0 0 256 256" aria-hidden="true">
-          <rect x="8" y="8" width="240" height="240" rx="56" fill="#2563eb" />
+          <rect x="8" y="8" width="240" height="240" rx="56" style="fill: var(--kme-primary)" />
           <path d="M78 72 L78 184 M78 128 L150 72 M78 128 L150 184"
             stroke="#fff" stroke-width="10" stroke-linecap="round" fill="none" />
-          <path d="M168 72 L168 184" stroke="#ffd60a" stroke-width="12" stroke-linecap="round" />
+          <path d="M168 72 L168 184" stroke="#fff" stroke-width="12" stroke-linecap="round" />
         </svg>
       </div>
       <NDropdown
@@ -208,7 +208,7 @@ function onMenuSelect(key: string | number): void {
   display: flex;
   align-items: stretch;
   background: var(--kme-bg-sidebar);
-  border-bottom: 1px solid var(--kme-border);
+  border-bottom: 1px solid var(--kme-border-light);
   user-select: none;
   -webkit-app-region: drag;
 }
@@ -236,11 +236,12 @@ function onMenuSelect(key: string | number): void {
   border: none;
   background: transparent;
   color: var(--kme-text-2);
-  font-size: 12.5px;
-  padding: 5px 10px;
-  border-radius: 5px;
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: var(--kme-radius-sm);
   cursor: default;
   line-height: 1.4;
+  transition: background 0.15s, color 0.15s;
 }
 
 .title-bar-menu-btn:hover {
@@ -285,7 +286,7 @@ function onMenuSelect(key: string | number): void {
 }
 
 .title-bar-close:hover {
-  background: #e81123;
+  background: var(--kme-danger-close);
   color: #ffffff;
 }
 </style>

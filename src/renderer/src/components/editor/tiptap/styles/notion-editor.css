@@ -5,7 +5,7 @@
   position: relative;
   /* overflow-y: auto; */
   overflow-x: clip;
-    background-color: var(--chat-common-bg)
+    background-color: var(--kme-bg)
 }
 
 .notion-editor-content {
@@ -41,7 +41,7 @@
 
 /* Placeholder styles */
 .notion-editor-prosemirror p.is-editor-empty:first-child::before {
-  color: var(--el-text-color-placeholder, #a8abb2);
+  color: var(--kme-text-3);
   content: attr(data-placeholder);
   float: left;
   height: 0;
@@ -50,7 +50,7 @@
 }
 
 .notion-editor-prosemirror p.is-empty::before {
-  color: var(--el-text-color-placeholder, #a8abb2);
+  color: var(--kme-text-3);
   content: attr(data-placeholder);
   float: left;
   height: 0;
@@ -65,7 +65,7 @@
 .notion-editor-prosemirror h4.is-empty::before,
 .notion-editor-prosemirror h5.is-empty::before,
 .notion-editor-prosemirror h6.is-empty::before {
-  color: var(--el-text-color-placeholder, #a8abb2);
+  color: var(--kme-text-3);
   content: attr(data-placeholder);
   float: left;
   height: 0;
@@ -77,8 +77,8 @@
 .notion-editor-prosemirror {
   font-size: 14px;
   line-height: 1.7;
-  color: var(--el-text-color-primary, #303133);
-  background-color: var(--color-background);
+  color: var(--kme-text-1);
+  background-color: var(--kme-bg);
   border-radius: 8px;
 }
 
@@ -131,18 +131,18 @@
 
 /* Code styles */
 .notion-editor-prosemirror code {
-  background-color: var(--el-fill-color-light, #f5f7fa);
+  background-color: var(--kme-bg-hover);
   border-radius: 4px;
-  color: var(--el-color-danger, #f56c6c);
+  color: var(--kme-danger);
   font-size: 0.9em;
   padding: 0.15em 0.3em;
   font-family: 'JetBrainsMono', monospace;
 }
 
 .notion-editor-prosemirror pre {
-  background: var(--el-color-black, #000);
+  background: #000000;
   border-radius: 8px;
-  color: var(--el-color-white, #fff);
+  color: #ffffff;
   font-family: 'JetBrainsMono', monospace;
   margin: 1rem 0;
   padding: 1rem;
@@ -157,16 +157,16 @@
 
 /* Blockquote */
 .notion-editor-prosemirror blockquote {
-  border-left: 3px solid var(--el-color-primary, #409eff);
+  border-left: 3px solid var(--kme-primary);
   margin: 0.5rem 0;
   padding-left: 1rem;
-  color: var(--el-text-color-secondary, #909399);
+  color: var(--kme-text-3);
 }
 
 /* Horizontal rule */
 .notion-editor-prosemirror hr {
   border: none;
-  border-top: 1px solid var(--el-border-color, #dcdfe6);
+  border-top: 1px solid var(--kme-border);
   margin: 1.5rem 0;
 }
 
@@ -181,7 +181,7 @@
 
 .notion-editor-prosemirror td,
 .notion-editor-prosemirror th {
-  border: 1px solid var(--el-border-color, #dcdfe6);
+  border: 1px solid var(--kme-border);
   box-sizing: border-box;
   min-width: 1em;
   padding: 6px 8px;
@@ -190,7 +190,7 @@
 }
 
 .notion-editor-prosemirror th {
-  background-color: var(--el-fill-color-lighter, #f5f7fa);
+  background-color: var(--kme-bg-soft);
   font-weight: 600;
   text-align: left;
 }
@@ -208,7 +208,7 @@
 }
 
 .notion-editor-prosemirror .column-resize-handle {
-  background-color: var(--el-color-primary, #409eff);
+  background-color: var(--kme-primary);
   bottom: -2px;
   pointer-events: none;
   position: absolute;
@@ -292,7 +292,7 @@
 }
 
 .notion-editor-prosemirror summary:hover {
-  color: var(--el-color-primary, #409eff);
+  color: var(--kme-primary);
 }
 
 /* Bubble toolbar — teleported to body, so unscoped */
@@ -300,8 +300,8 @@
   display: flex;
   align-items: center;
   gap: 2px;
-  background: var(--el-bg-color, #fff);
-  border: var(--border-style);
+  background: var(--kme-bg);
+  border: 1px solid var(--kme-border);
   border-radius: 8px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
   padding: 4px;
@@ -318,29 +318,29 @@
   background: none;
   border-radius: 4px;
   cursor: pointer;
-  color: var(--el-text-color-primary, #303133);
+  color: var(--kme-text-1);
   font-size: 14px;
   padding: 0 6px;
   transition: all 0.15s ease;
 }
 
 .notion-bubble-btn:hover {
-  background-color: var(--el-fill-color-light, #f5f7fa);
+  background-color: var(--kme-bg-hover);
 }
 
 .notion-bubble-btn:active {
-  background-color: var(--el-fill-color, #ebeef5);
+  background-color: var(--kme-bg-active);
 }
 
 .notion-bubble-btn.is-active {
-  background-color: var(--el-color-primary-light-9, #ecf5ff);
-  color: var(--el-color-primary, #409eff);
+  background-color: var(--kme-primary-weak);
+  color: var(--kme-primary);
 }
 
 .notion-bubble-sep {
   width: 1px;
   height: 20px;
-  background: var(--el-border-color-lighter, #e4e7ed);
+  background: var(--kme-border-light);
   margin: 0 2px;
   flex-shrink: 0;
 }
@@ -358,8 +358,8 @@
   display: flex;
   gap: 4px;
   padding: 8px;
-  background: var(--el-color-white, #fff);
-  border: 1px solid var(--el-border-color-lighter, #e4e7ed);
+  background: #ffffff;
+  border: 1px solid var(--kme-border-light);
   border-radius: 8px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
   z-index: 10000;
@@ -369,7 +369,7 @@
 .notion-bubble-dropdown-divider {
   width: 100%;
   height: 1px;
-  background: var(--el-border-color-lighter, #e4e7ed);
+  background: var(--kme-border-light);
   margin: 4px 0;
 }
 
@@ -388,22 +388,22 @@
 }
 
 .notion-color-swatch:hover {
-  border-color: var(--el-text-color-primary, #303133);
+  border-color: var(--kme-text-1);
   transform: scale(1.15);
 }
 
 .notion-color-swatch.is-active {
-  border-color: var(--el-color-primary, #409eff);
-  box-shadow: 0 0 0 2px var(--el-color-primary-light-9, #ecf5ff);
+  border-color: var(--kme-primary);
+  box-shadow: 0 0 0 2px var(--kme-primary-weak);
 }
 
 .notion-color-remove {
-  background: var(--el-fill-color-light, #f5f7fa);
-  color: var(--el-text-color-secondary, #909399);
+  background: var(--kme-bg-hover);
+  color: var(--kme-text-3);
 }
 
 .notion-color-remove:hover {
-  color: var(--el-color-danger, #f56c6c);
+  color: var(--kme-danger);
 }
 
 /* Link dropdown */
@@ -423,13 +423,13 @@
 .notion-link-label {
   font-size: 12px;
   font-weight: 500;
-  color: var(--el-text-color-secondary, #909399);
+  color: var(--kme-text-3);
 }
 
 .notion-link-input {
   width: 100%;
   padding: 6px 10px;
-  border: 1px solid var(--el-border-color, #dcdfe6);
+  border: 1px solid var(--kme-border);
   border-radius: 6px;
   font-size: 13px;
   outline: none;
@@ -438,7 +438,7 @@
 }
 
 .notion-link-input:focus {
-  border-color: var(--el-color-primary, #409eff);
+  border-color: var(--kme-primary);
 }
 
 .notion-link-actions {
@@ -453,8 +453,8 @@
   border-radius: 4px;
   font-size: 12px;
   cursor: pointer;
-  background: var(--el-fill-color-light, #f5f7fa);
-  color: var(--el-text-color-primary, #303133);
+  background: var(--kme-bg-hover);
+  color: var(--kme-text-1);
   display: flex;
   align-items: center;
   gap: 4px;
@@ -462,16 +462,16 @@
 }
 
 .notion-link-btn:hover {
-  background: var(--el-fill-color, #ebeef5);
+  background: var(--kme-bg-active);
 }
 
 .notion-link-btn.confirm {
-  background: var(--el-color-primary, #409eff);
+  background: var(--kme-primary);
   color: #fff;
 }
 
 .notion-link-btn.confirm:hover {
-  background: var(--el-color-primary-light-3, #79bbff);
+  background: var(--kme-primary-hover);
 }
 
 .notion-link-btn.confirm:disabled {
@@ -480,11 +480,11 @@
 }
 
 .notion-link-btn.danger {
-  color: var(--el-color-danger, #f56c6c);
+  color: var(--kme-danger);
 }
 
 .notion-link-btn.danger:hover {
-  background: var(--el-color-danger-light-9, #fef0f0);
+  background: rgba(229, 72, 77, 0.08);
 }
 
 /* Table Toolbar */
@@ -494,8 +494,8 @@
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  background: var(--el-bg-color, #fff);
-  border: var(--border-style);
+  background: var(--kme-bg);
+  border: 1px solid var(--kme-border);
   border-radius: 8px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
   padding: 4px;
@@ -524,17 +524,17 @@
   background: none;
   border-radius: 4px;
   cursor: pointer;
-  color: var(--el-text-color-primary, #303133);
+  color: var(--kme-text-1);
   transition: all 0.15s ease;
   padding: 0;
 }
 
 .ntb-btn:hover {
-  background-color: var(--el-fill-color-light, #f5f7fa);
+  background-color: var(--kme-bg-hover);
 }
 
 .ntb-btn:active {
-  background-color: var(--el-fill-color, #ebeef5);
+  background-color: var(--kme-bg-active);
 }
 
 .ntb-btn:disabled {
@@ -551,18 +551,18 @@
 }
 
 .ntb-danger {
-  color: var(--el-color-danger, #f56c6c);
+  color: var(--kme-danger);
 }
 
 .ntb-danger:hover {
-  background: var(--el-color-danger-light-9, #fef0f0);
-  color: var(--el-color-danger, #f56c6c);
+  background: rgba(229, 72, 77, 0.08);
+  color: var(--kme-danger);
 }
 
 .ntb-divider {
   width: 1px;
   height: 16px;
-  background: var(--el-border-color-lighter, #e4e7ed);
+  background: var(--kme-border-light);
   margin: 0 2px;
   flex-shrink: 0;
 }

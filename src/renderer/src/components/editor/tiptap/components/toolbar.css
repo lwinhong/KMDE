@@ -11,7 +11,7 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   padding: 0.25rem 0.5rem;
   overflow: visible;
-  background: var(--color-background);
+  background: var(--kme-bg);
 }
 
 .tiptap-toolbar.source-mode > :not(.md-toggle-btn):not(.tiptap-separator) {
@@ -24,7 +24,7 @@
   z-index: 2;
 }
 .dark .tiptap-toolbar {
-  background: var(--color-background);
+  background: var(--kme-bg);
 }
 
 .tiptap-toolbar-group {
@@ -36,7 +36,7 @@
 .tiptap-separator {
   width: 1px;
   height: 20px;
-  background: var(--el-border-color-lighter);
+  background: var(--kme-border-light);
   margin: 0 4px;
   flex-shrink: 0;
 }
@@ -51,18 +51,18 @@
   border-radius: 4px;
   background: transparent;
   cursor: pointer;
-  color: var(--el-text-color-regular);
+  color: var(--kme-text-2);
   transition: all 0.15s;
   flex-shrink: 0;
 }
 
 .toolbar-btn:hover {
-  background: var(--el-fill-color-light);
+  background: var(--kme-bg-hover);
 }
 
 .toolbar-btn.is-active {
-  background: var(--el-color-primary-light-9);
-  color: var(--el-color-primary);
+  background: var(--kme-primary-weak);
+  color: var(--kme-primary);
 }
 
 .toolbar-btn:disabled,
@@ -95,10 +95,10 @@
   top: 100%;
   left: 0;
   margin-top: 4px;
-  background: var(--color-background);
-  border: 1px solid var(--el-border-color-lighter);
+  background: var(--kme-bg);
+  border: 1px solid var(--kme-border-light);
   border-radius: 6px;
-  box-shadow: var(--el-box-shadow-light);
+  box-shadow: var(--kme-shadow-light);
   z-index: 2000;
   min-width: 140px;
   padding: 4px;
@@ -114,18 +114,18 @@
   border-radius: 4px;
   background: transparent;
   cursor: pointer;
-  color: var(--el-text-color-regular);
+  color: var(--kme-text-2);
   font-size: 13px;
   transition: background 0.15s;
 }
 
 .dropdown-item:hover {
-  background: var(--el-fill-color-light);
+  background: var(--kme-bg-hover);
 }
 
 .dropdown-item.is-active {
-  background: var(--el-color-primary-light-9);
-  color: var(--el-color-primary);
+  background: var(--kme-primary-weak);
+  color: var(--kme-primary);
 }
 
 .dropdown-item:disabled {
@@ -134,11 +134,11 @@
 }
 
 .dropdown-item.danger {
-  color: var(--el-color-danger);
+  color: var(--kme-danger);
 }
 
 .dropdown-item.danger:hover {
-  background: var(--el-color-danger-light-9);
+  background: rgba(229, 72, 77, 0.08);
 }
 
 .dropdown-item-heading {
@@ -154,18 +154,18 @@
 .dropdown-item-heading.h0 { font-size: 13px; opacity: 0.6; }
 
 .dropdown-item-label {
-  color: var(--el-text-color-secondary);
+  color: var(--kme-text-3);
 }
 
 .dropdown-item-hint {
   margin-left: auto;
   font-size: 11px;
-  color: var(--el-text-color-placeholder);
+  color: var(--kme-text-3);
 }
 
 .dropdown-divider {
   height: 1px;
-  background: var(--el-border-color-lighter);
+  background: var(--kme-border-light);
   margin: 4px 0;
 }
 
@@ -199,14 +199,14 @@
 }
 
 .highlight-color-btn.is-active {
-  border-color: var(--el-color-primary);
+  border-color: var(--kme-primary);
 }
 
 .highlight-actions {
   display: flex;
   justify-content: center;
   padding-top: 4px;
-  border-top: 1px solid var(--el-border-color-lighter);
+  border-top: 1px solid var(--kme-border-light);
 }
 
 .highlight-remove-btn {
@@ -219,13 +219,13 @@
   border-radius: 4px;
   background: transparent;
   cursor: pointer;
-  color: var(--el-text-color-secondary);
+  color: var(--kme-text-3);
   transition: all 0.15s;
 }
 
 .highlight-remove-btn:hover {
-  background: var(--el-fill-color-light);
-  color: var(--el-color-danger);
+  background: var(--kme-bg-hover);
+  color: var(--kme-danger);
 }
 
 .link-popover {
@@ -242,7 +242,7 @@
   flex: 1;
   height: 32px;
   padding: 0 8px;
-  border: 1px solid var(--el-border-color);
+  border: 1px solid var(--kme-border);
   border-radius: 4px;
   font-size: 13px;
   outline: none;
@@ -250,11 +250,11 @@
 }
 
 .link-input:focus {
-  border-color: var(--el-color-primary);
+  border-color: var(--kme-primary);
 }
 
 .link-input::placeholder {
-  color: var(--el-text-color-placeholder);
+  color: var(--kme-text-3);
 }
 
 .link-action-btn {
@@ -267,13 +267,13 @@
   border-radius: 4px;
   background: transparent;
   cursor: pointer;
-  color: var(--el-text-color-regular);
+  color: var(--kme-text-2);
   transition: all 0.15s;
   flex-shrink: 0;
 }
 
 .link-action-btn:hover {
-  background: var(--el-fill-color-light);
+  background: var(--kme-bg-hover);
 }
 
 .link-actions {
@@ -281,7 +281,7 @@
   gap: 4px;
   margin-top: 4px;
   padding-top: 4px;
-  border-top: 1px solid var(--el-border-color-lighter);
+  border-top: 1px solid var(--kme-border-light);
 }
 
 .image-popover {
@@ -303,7 +303,7 @@
 
 .image-form-label {
   font-size: 12px;
-  color: var(--el-text-color-secondary);
+  color: var(--kme-text-3);
   font-weight: 500;
 }
 
@@ -311,7 +311,7 @@
   width: 100%;
   height: 32px;
   padding: 0 8px;
-  border: 1px solid var(--el-border-color);
+  border: 1px solid var(--kme-border);
   border-radius: 4px;
   font-size: 13px;
   outline: none;
@@ -320,11 +320,11 @@
 }
 
 .image-form-input:focus {
-  border-color: var(--el-color-primary);
+  border-color: var(--kme-primary);
 }
 
 .image-form-input::placeholder {
-  color: var(--el-text-color-placeholder);
+  color: var(--kme-text-3);
 }
 
 .image-form-actions {
@@ -341,23 +341,23 @@
   font-size: 13px;
   cursor: pointer;
   transition: all 0.15s;
-  border: 1px solid var(--el-border-color);
-  background: var(--el-color-white);
-  color: var(--el-text-color-regular);
+  border: 1px solid var(--kme-border);
+  background: #ffffff;
+  color: var(--kme-text-2);
 }
 
 .image-form-btn:hover {
-  border-color: var(--el-text-color-secondary);
+  border-color: var(--kme-text-3);
 }
 
 .image-form-btn.confirm {
-  background: var(--el-color-primary);
-  color: var(--el-color-white);
-  border-color: var(--el-color-primary);
+  background: var(--kme-primary);
+  color: #ffffff;
+  border-color: var(--kme-primary);
 }
 
 .image-form-btn.confirm:hover {
-  background: var(--el-color-primary-light-3);
+  background: var(--kme-primary-hover);
 }
 
 .image-form-btn.confirm:disabled {
@@ -366,5 +366,5 @@
 }
 
 .image-form-btn.confirm:disabled:hover {
-  background: var(--el-color-primary);
+  background: var(--kme-primary);
 }

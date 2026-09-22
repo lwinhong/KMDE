@@ -112,7 +112,7 @@ const removeLink = (close) => {
 
 .link-form-label {
   font-size: 12px;
-  color: var(--el-text-color-secondary);
+  color: var(--kme-text-3);
   font-weight: 500;
 }
 
@@ -120,7 +120,7 @@ const removeLink = (close) => {
   width: 100%;
   height: 32px;
   padding: 0 8px;
-  border: 1px solid var(--el-border-color);
+  border: 1px solid var(--kme-border);
   border-radius: 4px;
   font-size: 13px;
   outline: none;
@@ -129,11 +129,11 @@ const removeLink = (close) => {
 }
 
 .link-form-input:focus {
-  border-color: var(--el-color-primary);
+  border-color: var(--kme-primary);
 }
 
 .link-form-input::placeholder {
-  color: var(--el-text-color-placeholder);
+  color: var(--kme-text-3);
 }
 
 .link-form-actions {
@@ -157,25 +157,25 @@ const removeLink = (close) => {
   font-size: 12px;
   cursor: pointer;
   transition: all 0.15s;
-  border: 1px solid var(--el-border-color);
-  background: var(--el-color-white);
-  color: var(--el-text-color-regular);
+  border: 1px solid var(--kme-border);
+  background: #ffffff;
+  color: var(--kme-text-2);
   display: inline-flex;
   align-items: center;
 }
 
 .link-form-btn:hover {
-  border-color: var(--el-text-color-secondary);
+  border-color: var(--kme-text-3);
 }
 
 .link-form-btn.confirm {
-  background: var(--el-color-primary);
-  color: var(--el-color-white);
-  border-color: var(--el-color-primary);
+  background: var(--kme-primary);
+  color: #ffffff;
+  border-color: var(--kme-primary);
 }
 
 .link-form-btn.confirm:hover {
-  background: var(--el-color-primary-light-3);
+  background: var(--kme-primary-hover);
 }
 
 .link-form-btn.confirm:disabled {
@@ -184,11 +184,11 @@ const removeLink = (close) => {
 }
 
 .link-form-btn.danger {
-  color: var(--el-color-danger);
-  border-color: var(--el-color-danger);
+  color: var(--kme-danger);
+  border-color: var(--kme-danger);
 }
 
 .link-form-btn.danger:hover {
-  background: var(--el-color-danger-light-9);
+  background: rgba(229, 72, 77, 0.08);
 }
 </style>
