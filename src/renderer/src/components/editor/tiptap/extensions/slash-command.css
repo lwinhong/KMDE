@@ -1,8 +1,8 @@
 .notion-slash-menu {
-  background: var(--kme-bg);
+  background: var(--kme-popover-bg);
   border: 1px solid var(--kme-border-light);
-  border-radius: 8px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, .12);
+  border-radius: var(--kme-radius-lg);
+  box-shadow: var(--kme-shadow-md);
   width: 280px;
   max-height: 320px;
   overflow: hidden;
@@ -32,7 +32,7 @@
   padding: 8px 10px;
   border: none;
   background: none;
-  border-radius: 6px;
+  border-radius: var(--kme-radius-md);
   cursor: pointer;
   text-align: left;
   transition: background-color .1s;
@@ -50,7 +50,7 @@
   align-items: center;
   justify-content: center;
   border: 1px solid var(--kme-border-light);
-  border-radius: 6px;
+  border-radius: var(--kme-radius-md);
   background: var(--kme-bg);
   color: var(--kme-text-1);
   flex-shrink: 0;

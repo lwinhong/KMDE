@@ -48,15 +48,15 @@ function levelIndent(level: number): string {
   display: flex;
   flex-direction: column;
   background: var(--kme-bg-sidebar);
-  border-left: 1px solid var(--kme-border);
+  border-left: 1px solid var(--kme-border-light);
   min-height: 0;
 }
 
 .outline-header {
-  padding: 8px 10px;
+  padding: 8px 12px;
   font-size: 11.5px;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.8px;
   color: var(--kme-text-3);
   user-select: none;
 }
@@ -74,11 +74,14 @@ function levelIndent(level: number): string {
   padding-top: 4px;
   padding-bottom: 4px;
   padding-right: 8px;
+  margin: 1px 6px;
+  border-radius: var(--kme-radius-sm);
   font-size: 12.5px;
   color: var(--kme-text-2);
   cursor: pointer;
   user-select: none;
   white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
 }
 
 .outline-item:hover {

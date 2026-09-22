@@ -62,8 +62,8 @@ const kmdeCmTheme = EditorView.theme({
   '&.cm-focused': { outline: 'none' },
   '.cm-activeLine': { backgroundColor: 'var(--kme-bg-hover)' },
   '.cm-activeLineGutter': { backgroundColor: 'var(--kme-bg-hover)', color: 'var(--kme-text-1)' },
-  '.cm-selectionBackground, ::selection': { backgroundColor: 'var(--kme-primary-weak)' },
-  '&.cm-focused .cm-selectionBackground': { backgroundColor: 'var(--kme-primary-weak)' },
+  '.cm-selectionBackground, ::selection': { backgroundColor: 'var(--kme-selection)' },
+  '&.cm-focused .cm-selectionBackground': { backgroundColor: 'var(--kme-selection)' },
   '.cm-cursor': { borderLeftColor: 'var(--kme-primary)' }
 })
 

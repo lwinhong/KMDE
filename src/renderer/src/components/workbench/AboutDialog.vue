@@ -15,12 +15,12 @@ defineExpose({ open })
   <NModal :show="show" transform-origin="center" @update:show="show = $event">
     <div class="about-dialog">
       <svg class="about-logo" width="56" height="56" viewBox="0 0 256 256" aria-hidden="true">
-        <rect x="8" y="8" width="240" height="240" rx="56" fill="#2563eb" />
+        <rect x="8" y="8" width="240" height="240" rx="56" style="fill: var(--kme-primary)" />
         <path
           d="M78 72 L78 184 M78 128 L150 72 M78 128 L150 184"
           stroke="#fff" stroke-width="10" stroke-linecap="round" fill="none"
         />
-        <path d="M168 72 L168 184" stroke="#ffd60a" stroke-width="12" stroke-linecap="round" />
+        <path d="M168 72 L168 184" stroke="#fff" stroke-width="12" stroke-linecap="round" />
       </svg>
 
       <div class="about-name">KMDE</div>
@@ -44,15 +44,15 @@ defineExpose({ open })
   width: 360px;
   max-width: 90vw;
   background: var(--kme-bg-float);
-  border: 1px solid var(--kme-border);
-  border-radius: 12px;
+  border: 1px solid var(--kme-border-light);
+  border-radius: var(--kme-radius-xl);
   padding: 32px 28px 20px;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--kme-shadow-lg);
   text-align: center;
 }
 
 .about-logo {
-  filter: drop-shadow(0 6px 16px rgba(37, 99, 235, 0.35));
+  filter: drop-shadow(0 6px 16px var(--kme-primary-weak-hover));
 }
 
 .about-name {
@@ -77,10 +77,10 @@ defineExpose({ open })
   font-weight: 600;
   line-height: 1;
   color: var(--kme-primary);
-  background: rgba(37, 99, 235, 0.12);
-  border: 1px solid rgba(37, 99, 235, 0.3);
+  background: var(--kme-primary-weak);
+  border: 1px solid var(--kme-primary-weak-hover);
   padding: 4px 10px;
-  border-radius: 999px;
+  border-radius: var(--kme-radius-full);
 }
 
 .about-divider {

@@ -188,7 +188,8 @@ defineExpose({ open, close })
 .palette-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.35);
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(2px);
   z-index: 3000;
   display: flex;
   justify-content: center;
@@ -199,13 +200,27 @@ defineExpose({ open, close })
 .palette-panel {
   width: 560px;
   max-width: 90vw;
-  background: var(--kme-bg-float);
-  border: 1px solid var(--kme-border);
-  border-radius: 10px;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+  background: var(--kme-glass-bg);
+  backdrop-filter: blur(var(--kme-blur)) saturate(1.4);
+  -webkit-backdrop-filter: blur(var(--kme-blur)) saturate(1.4);
+  border: 1px solid var(--kme-border-light);
+  border-radius: var(--kme-radius-xl);
+  box-shadow: var(--kme-shadow-lg);
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  animation: palette-in 0.15s ease-out;
+}
+
+@keyframes palette-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .palette-input-wrap {
@@ -221,8 +236,8 @@ defineExpose({ open, close })
   font-weight: 600;
   color: var(--kme-primary);
   background: var(--kme-primary-weak);
-  border-radius: 4px;
-  padding: 2px 6px;
+  border-radius: var(--kme-radius-sm);
+  padding: 2px 8px;
 }
 
 .palette-input {
@@ -247,8 +262,8 @@ defineExpose({ open, close })
 .palette-list {
   max-height: 340px;
   overflow-y: auto;
-  padding: 4px 6px;
-  border-top: 1px solid var(--kme-border);
+  padding: 6px 8px;
+  border-top: 1px solid var(--kme-border-light);
 }
 
 .palette-item {
@@ -256,9 +271,10 @@ defineExpose({ open, close })
   align-items: center;
   gap: 10px;
   padding: 8px 10px;
-  border-radius: 6px;
+  border-radius: var(--kme-radius-md);
   cursor: pointer;
   user-select: none;
+  transition: background 0.12s;
 }
 
 .palette-item.is-selected {
@@ -276,7 +292,7 @@ defineExpose({ open, close })
   font-weight: 700;
   color: var(--kme-text-3);
   border: 1px solid var(--kme-border);
-  border-radius: 4px;
+  border-radius: var(--kme-radius-sm);
 }
 
 .palette-item.is-selected .palette-item-icon {
@@ -306,7 +322,7 @@ defineExpose({ open, close })
   font-size: 11px;
   color: var(--kme-text-3);
   border: 1px solid var(--kme-border);
-  border-radius: 4px;
+  border-radius: var(--kme-radius-sm);
   padding: 1px 5px;
 }
 
@@ -321,7 +337,7 @@ defineExpose({ open, close })
   display: flex;
   gap: 14px;
   padding: 8px 14px;
-  border-top: 1px solid var(--kme-border);
+  border-top: 1px solid var(--kme-border-light);
   font-size: 11px;
   color: var(--kme-text-3);
 }

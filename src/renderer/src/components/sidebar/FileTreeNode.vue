@@ -94,16 +94,20 @@ export default { name: 'FileTreeNode' }
   align-items: center;
   gap: 5px;
   height: 26px;
+  margin: 1px 6px;
   padding-right: 8px;
+  border-radius: var(--kme-radius-sm);
   cursor: pointer;
   color: var(--kme-text-2);
   font-size: 13px;
   user-select: none;
   white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
 }
 
 .ft-node:hover {
   background: var(--kme-bg-hover);
+  color: var(--kme-text-1);
 }
 
 .ft-arrow {

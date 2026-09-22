@@ -79,7 +79,7 @@
   line-height: 1.7;
   color: var(--kme-text-1);
   background-color: var(--kme-bg);
-  border-radius: 8px;
+  border-radius: var(--kme-radius-md);
 }
 
 .notion-editor-prosemirror>*:first-child {
@@ -300,10 +300,10 @@
   display: flex;
   align-items: center;
   gap: 2px;
-  background: var(--kme-bg);
-  border: 1px solid var(--kme-border);
-  border-radius: 8px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  background: var(--kme-popover-bg);
+  border: 1px solid var(--kme-border-light);
+  border-radius: var(--kme-radius-lg);
+  box-shadow: var(--kme-shadow-md);
   padding: 4px;
   animation: notion-toolbar-in 0.15s ease-out;
 }
@@ -316,7 +316,7 @@
   height: 28px;
   border: none;
   background: none;
-  border-radius: 4px;
+  border-radius: var(--kme-radius-sm);
   cursor: pointer;
   color: var(--kme-text-1);
   font-size: 14px;
@@ -358,10 +358,10 @@
   display: flex;
   gap: 4px;
   padding: 8px;
-  background: #ffffff;
+  background: var(--kme-popover-bg);
   border: 1px solid var(--kme-border-light);
-  border-radius: 8px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  border-radius: var(--kme-radius-md);
+  box-shadow: var(--kme-shadow-md);
   z-index: 10000;
   flex-wrap: wrap;
 }
@@ -376,7 +376,7 @@
 .notion-color-swatch {
   width: 24px;
   height: 24px;
-  border-radius: 4px;
+  border-radius: var(--kme-radius-sm);
   border: 2px solid transparent;
   cursor: pointer;
   transition: border-color 0.1s, transform 0.1s;
@@ -430,15 +430,18 @@
   width: 100%;
   padding: 6px 10px;
   border: 1px solid var(--kme-border);
-  border-radius: 6px;
+  border-radius: var(--kme-radius-sm);
   font-size: 13px;
   outline: none;
+  background: var(--kme-bg);
+  color: var(--kme-text-1);
   box-sizing: border-box;
-  transition: border-color 0.15s;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 
 .notion-link-input:focus {
   border-color: var(--kme-primary);
+  box-shadow: var(--kme-shadow-glow);
 }
 
 .notion-link-actions {
@@ -450,7 +453,7 @@
 .notion-link-btn {
   padding: 4px 10px;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--kme-radius-sm);
   font-size: 12px;
   cursor: pointer;
   background: var(--kme-bg-hover);
@@ -494,10 +497,10 @@
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  background: var(--kme-bg);
-  border: 1px solid var(--kme-border);
-  border-radius: 8px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  background: var(--kme-popover-bg);
+  border: 1px solid var(--kme-border-light);
+  border-radius: var(--kme-radius-lg);
+  box-shadow: var(--kme-shadow-md);
   padding: 4px;
   animation: notion-toolbar-in 0.15s ease-out;
 }
@@ -522,7 +525,7 @@
   height: 32px;
   border: none;
   background: none;
-  border-radius: 4px;
+  border-radius: var(--kme-radius-sm);
   cursor: pointer;
   color: var(--kme-text-1);
   transition: all 0.15s ease;

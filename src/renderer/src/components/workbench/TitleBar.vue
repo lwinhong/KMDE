@@ -128,7 +128,7 @@ const menus = computed<DropdownOption[]>(() => [
   {
     key: 'help',
     label: t('menu.help'),
-    children: [item('about', t('menu.aboutKmde')), item('tiptap-site', t('menu.tiptapSite'))]
+    children: [item('about', t('menu.aboutKmde'))]
   }
 ])
 
@@ -225,6 +225,11 @@ function onMenuSelect(key: string | number): void {
   -webkit-app-region: no-drag;
 }
 
+.title-bar-left :deep(.n-dropdown) {
+  display: inline-flex;
+  align-items: center;
+}
+
 .title-bar-logo {
   display: flex;
   align-items: center;
@@ -237,10 +242,14 @@ function onMenuSelect(key: string | number): void {
   background: transparent;
   color: var(--kme-text-2);
   font-size: 12px;
-  padding: 4px 10px;
+  line-height: 1;
+  height: 24px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border-radius: var(--kme-radius-sm);
   cursor: default;
-  line-height: 1.4;
   transition: background 0.15s, color 0.15s;
 }
 

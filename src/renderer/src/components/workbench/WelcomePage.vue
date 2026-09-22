@@ -54,7 +54,7 @@ defineEmits<{
   font-size: 44px;
   font-weight: 800;
   letter-spacing: 2px;
-  background: linear-gradient(120deg, var(--kme-primary), #a855f7);
+  background: var(--kme-gradient-text);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -80,7 +80,7 @@ defineEmits<{
 .welcome-btn {
   padding: 9px 22px;
   font-size: 14px;
-  border-radius: 8px;
+  border-radius: var(--kme-radius-lg);
   border: 1px solid var(--kme-border);
   background: var(--kme-bg);
   color: var(--kme-text-1);
@@ -91,18 +91,22 @@ defineEmits<{
 .welcome-btn:hover {
   border-color: var(--kme-primary);
   color: var(--kme-primary);
+  background: var(--kme-primary-weak);
 }
 
 .welcome-btn.primary {
-  background: var(--kme-primary);
-  border-color: var(--kme-primary);
+  background: var(--kme-gradient-brand);
+  border-color: transparent;
   color: #fff;
+  box-shadow: var(--kme-shadow-sm);
 }
 
 .welcome-btn.primary:hover {
-  background: var(--kme-primary-hover);
-  border-color: var(--kme-primary-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--kme-shadow-glow);
+  border-color: transparent;
   color: #fff;
+  background: var(--kme-gradient-brand);
 }
 
 .welcome-tips {

@@ -50,8 +50,8 @@ function onAuxClick(e: MouseEvent, id: string): void {
         </span>
         <span class="tabbar-tab-dot" :class="{ 'is-dirty': tab.dirty }" />
         <button class="tabbar-tab-close" :title="$t('common.close')" @click="onTabClose($event, tab.id)">
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5">
-            <path d="M18 6 6 18M6 6l12 12" />
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M22 2 2 22 M2 2l20 20" />
           </svg>
         </button>
       </div>
@@ -84,13 +84,14 @@ function onAuxClick(e: MouseEvent, id: string): void {
   height: 38px;
   flex-shrink: 0;
   background: var(--kme-tabbar-bg);
-  border-bottom: 1px solid var(--kme-border);
+  border-bottom: 1px solid var(--kme-border-light);
   user-select: none;
+  padding: 0 4px;
 }
 
 .tabbar-tabs {
   display: flex;
-  align-items: stretch;
+  align-items: center;
   overflow-x: auto;
   flex: 1;
   min-width: 0;
@@ -106,14 +107,17 @@ function onAuxClick(e: MouseEvent, id: string): void {
   align-items: center;
   gap: 6px;
   padding: 0 10px;
+  margin: 5px 2px;
+  height: 28px;
   min-width: 120px;
   max-width: 220px;
-  border-right: 1px solid var(--kme-border);
+  border-radius: var(--kme-radius-md);
   color: var(--kme-text-2);
   cursor: pointer;
   position: relative;
   font-size: 12.5px;
   white-space: nowrap;
+  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .tabbar-tab:hover {
@@ -123,16 +127,7 @@ function onAuxClick(e: MouseEvent, id: string): void {
 .tabbar-tab.is-active {
   background: var(--kme-bg);
   color: var(--kme-text-1);
-}
-
-.tabbar-tab.is-active::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 0;
-  height: 2px;
-  background: var(--kme-primary);
+  box-shadow: var(--kme-shadow-xs);
 }
 
 .tabbar-tab-icon {
@@ -153,9 +148,9 @@ function onAuxClick(e: MouseEvent, id: string): void {
 }
 
 .tabbar-tab-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
+  width: 7px;
+  height: 7px;
+  border-radius: var(--kme-radius-full);
   flex-shrink: 0;
 }
 
@@ -167,15 +162,21 @@ function onAuxClick(e: MouseEvent, id: string): void {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--kme-radius-full);
   background: transparent;
   color: var(--kme-text-3);
   cursor: pointer;
   flex-shrink: 0;
   opacity: 0;
+  transition: background 0.15s, color 0.15s, opacity 0.15s;
+}
+
+.tabbar-tab-close svg {
+  width: 16px;
+  height: 16px;
 }
 
 .tabbar-tab:hover .tabbar-tab-close,
@@ -203,14 +204,15 @@ function onAuxClick(e: MouseEvent, id: string): void {
   width: 28px;
   height: 28px;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--kme-radius-md);
   background: transparent;
   color: var(--kme-text-2);
   cursor: pointer;
+  transition: background 0.15s, color 0.15s;
 }
 
 .tabbar-action-btn:hover {
-  background: var(--kme-bg-hover);
+  background: var(--kme-bg-active);
   color: var(--kme-text-1);
 }
 </style>

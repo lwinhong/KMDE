@@ -48,10 +48,10 @@ function resolve(action: 'load-disk' | 'keep'): void {
   width: 520px;
   max-width: 90vw;
   background: var(--kme-bg-float);
-  border: 1px solid var(--kme-border);
-  border-radius: 10px;
+  border: 1px solid var(--kme-border-light);
+  border-radius: var(--kme-radius-xl);
   padding: 20px 22px;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+  box-shadow: var(--kme-shadow-lg);
 }
 
 .conflict-title {
@@ -86,8 +86,8 @@ function resolve(action: 'load-disk' | 'keep'): void {
   max-height: 180px;
   overflow: auto;
   background: var(--kme-bg);
-  border: 1px solid var(--kme-border);
-  border-radius: 6px;
+  border: 1px solid var(--kme-border-light);
+  border-radius: var(--kme-radius-md);
   padding: 10px 12px;
   font-size: 12px;
   line-height: 1.6;

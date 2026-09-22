@@ -8,10 +8,12 @@
   z-index: 50;
   width: 100%;
   min-height: 40px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--kme-shadow-sm);
   padding: 0.25rem 0.5rem;
   overflow: visible;
-  background: var(--kme-bg);
+  background: var(--kme-glass-bg);
+  backdrop-filter: blur(var(--kme-blur)) saturate(1.4);
+  -webkit-backdrop-filter: blur(var(--kme-blur)) saturate(1.4);
 }
 
 .tiptap-toolbar.source-mode > :not(.md-toggle-btn):not(.tiptap-separator) {
@@ -24,7 +26,7 @@
   z-index: 2;
 }
 .dark .tiptap-toolbar {
-  background: var(--kme-bg);
+  background: var(--kme-glass-bg);
 }
 
 .tiptap-toolbar-group {
@@ -48,7 +50,7 @@
   width: 32px;
   height: 32px;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--kme-radius-sm);
   background: transparent;
   cursor: pointer;
   color: var(--kme-text-2);
@@ -95,10 +97,10 @@
   top: 100%;
   left: 0;
   margin-top: 4px;
-  background: var(--kme-bg);
+  background: var(--kme-popover-bg);
   border: 1px solid var(--kme-border-light);
-  border-radius: 6px;
-  box-shadow: var(--kme-shadow-light);
+  border-radius: var(--kme-radius-md);
+  box-shadow: var(--kme-shadow-md);
   z-index: 2000;
   min-width: 140px;
   padding: 4px;
@@ -111,7 +113,7 @@
   width: 100%;
   padding: 6px 10px;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--kme-radius-sm);
   background: transparent;
   cursor: pointer;
   color: var(--kme-text-2);
@@ -188,7 +190,7 @@
 .highlight-color-btn {
   width: 24px;
   height: 24px;
-  border-radius: 4px;
+  border-radius: var(--kme-radius-sm);
   border: 2px solid transparent;
   cursor: pointer;
   transition: all 0.15s;
@@ -216,7 +218,7 @@
   width: 28px;
   height: 28px;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--kme-radius-sm);
   background: transparent;
   cursor: pointer;
   color: var(--kme-text-3);
@@ -243,14 +245,17 @@
   height: 32px;
   padding: 0 8px;
   border: 1px solid var(--kme-border);
-  border-radius: 4px;
+  border-radius: var(--kme-radius-sm);
   font-size: 13px;
   outline: none;
-  transition: border-color 0.15s;
+  background: var(--kme-bg);
+  color: var(--kme-text-1);
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 
 .link-input:focus {
   border-color: var(--kme-primary);
+  box-shadow: var(--kme-shadow-glow);
 }
 
 .link-input::placeholder {
@@ -264,7 +269,7 @@
   width: 32px;
   height: 32px;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--kme-radius-sm);
   background: transparent;
   cursor: pointer;
   color: var(--kme-text-2);
@@ -312,15 +317,17 @@
   height: 32px;
   padding: 0 8px;
   border: 1px solid var(--kme-border);
-  border-radius: 4px;
+  border-radius: var(--kme-radius-sm);
   font-size: 13px;
   outline: none;
-  transition: border-color 0.15s;
-  box-sizing: border-box;
+  background: var(--kme-bg);
+  color: var(--kme-text-1);
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 
 .image-form-input:focus {
   border-color: var(--kme-primary);
+  box-shadow: var(--kme-shadow-glow);
 }
 
 .image-form-input::placeholder {
@@ -337,12 +344,12 @@
 .image-form-btn {
   height: 30px;
   padding: 0 12px;
-  border-radius: 4px;
+  border-radius: var(--kme-radius-sm);
   font-size: 13px;
   cursor: pointer;
   transition: all 0.15s;
   border: 1px solid var(--kme-border);
-  background: #ffffff;
+  background: var(--kme-bg);
   color: var(--kme-text-2);
 }
 

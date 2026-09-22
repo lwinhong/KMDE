@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch, onBeforeUnmount } from 'vue'
+import { computed, ref, watch, nextTick, onBeforeUnmount } from 'vue'
 import { useMessage } from 'naive-ui'
 import type { OutlineItem } from '@shared/types'
 import { useTabsStore } from '../../stores/tabs.store'

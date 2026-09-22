@@ -51,7 +51,7 @@ const modeLabel = computed(() => (tabs.activeTab?.mode === 'source' ? t('statusb
   padding: 0 10px;
   flex-shrink: 0;
   background: var(--kme-tabbar-bg);
-  border-top: 1px solid var(--kme-border);
+  border-top: 1px solid var(--kme-border-light);
   font-size: 11.5px;
   color: var(--kme-text-3);
   user-select: none;
@@ -77,9 +77,15 @@ const modeLabel = computed(() => (tabs.activeTab?.mode === 'source' ? t('statusb
   background: transparent;
   color: var(--kme-text-3);
   font-size: 11.5px;
+  line-height: 1;
+  height: 18px;
+  padding: 0 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--kme-radius-sm);
   cursor: pointer;
-  padding: 2px 6px;
-  border-radius: 4px;
+  transition: background 0.15s, color 0.15s;
 }
 
 .statusbar-btn:hover {
