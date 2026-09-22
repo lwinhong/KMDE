@@ -8,6 +8,9 @@ files:
   - package.json
 asarUnpack:
   - resources/**
+extraResources:
+  - from: resources/export-assets
+    to: export-assets
 win:
   target:
     - nsis

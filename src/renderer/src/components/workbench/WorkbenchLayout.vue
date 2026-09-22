@@ -6,6 +6,7 @@ import { useTabsStore } from '../../stores/tabs.store'
 import { useWorkspaceStore } from '../../stores/workspace.store'
 import type { MenuCommand, FsEvent, OutlineItem } from '@shared/types'
 import TabBar from './TabBar.vue'
+import TitleBar from './TitleBar.vue'
 import StatusBar from './StatusBar.vue'
 import WelcomePage from './WelcomePage.vue'
 import FileTree from '../sidebar/FileTree.vue'
@@ -189,6 +190,19 @@ async function closeTab(id: string): Promise<void> {
   tabs.removeTab(id)
 }
 
+async function requestCloseApp(): Promise<void> {
+  for (const tab of [...tabs.tabs]) {
+    if (tab.dirty || tab.deleted) {
+      const ok = window.confirm(`「${tab.fileName}」有未保存的修改，是否保存并关闭？`)
+      if (ok) {
+        const saved = await tabs.flushSave(tab.id)
+        if (!saved) return
+      }
+    }
+  }
+  window.kmde.closeWindow()
+}
+
 // ---------------- external events ----------------
 
 let unsubs: Array<() => void> = []
@@ -243,6 +257,9 @@ onMounted(async () => {
     }),
     window.kmde.onMenuCommand((command) => {
       void runCommand(command)
+    }),
+    window.kmde.onAppRequestClose(() => {
+      void requestCloseApp()
     })
   )
 
@@ -276,6 +293,7 @@ function handleOutlineJump(item: OutlineItem): void {
 
 <template>
   <div class="workbench" @dragover.prevent @drop.prevent="handleDrop">
+    <TitleBar @command="runCommand" @request-close="requestCloseApp" />
     <TabBar @open-file="openFilePicker" @open-folder="openFolderPicker" @new-file="newFile()" @close-tab="closeTab" />
     <div class="workbench-main">
       <FileTree v-if="settings.sidebarVisible" @open-file="openFileByPath" />

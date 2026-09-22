@@ -11,7 +11,7 @@
     "preview": "electron-vite preview",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
     "typecheck:web": "vue-tsc --noEmit -p tsconfig.web.json --composite false",
-    "build:win": "electron-vite build && electron-builder --win nsis"
+    "build:win": "node scripts/prepare-export-assets.mjs && electron-vite build && electron-builder --win nsis"
   },
   "dependencies": {
     "@codemirror/commands": "^6.11.1",
@@ -59,7 +59,7 @@
     "electron": "^44.4.3",
     "electron-builder": "^26.15.3",
     "electron-vite": "^5.0.0",
-    "typescript": "^5.9.3",
+    "typescript": "^7.0.2",
     "vite": "^8.3.0",
     "vue-tsc": "^3.3.11"
   },

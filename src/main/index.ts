@@ -1,4 +1,4 @@
-import { app, BrowserWindow, protocol, shell, session } from 'electron'
+import { app, BrowserWindow, ipcMain, protocol, shell, session } from 'electron'
 import { join } from 'path'
 import { existsSync, statSync } from 'fs'
 import { registerIpcHandlers, sendToRenderer } from './ipc'
@@ -13,6 +13,7 @@ if (!app.isPackaged) {
 }
 
 let mainWindow: BrowserWindow | null = null
+let readyToClose = false
 
 function extractMdPathFromArgv(argv: string[]): string | null {
   for (let i = argv.length - 1; i >= 0; i--) {
@@ -38,7 +39,8 @@ function createWindow(): void {
     minWidth: 900,
     minHeight: 600,
     show: false,
-    autoHideMenuBar: false,
+    frame: false,
+    autoHideMenuBar: true,
     backgroundColor: '#ffffff',
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
@@ -48,6 +50,22 @@ function createWindow(): void {
       webSecurity: true,
       spellcheck: false
     }
+  })
+
+  // intercept native close (Alt+F4 / taskbar) so the renderer can
+  // prompt for unsaved tabs before actually quitting
+  mainWindow.on('close', (event) => {
+    if (readyToClose) return
+    if (!mainWindow || mainWindow.isDestroyed()) return
+    event.preventDefault()
+    mainWindow.webContents.send('app:request-close')
+  })
+
+  mainWindow.on('maximize', () => {
+    mainWindow?.webContents.send('window:state', true)
+  })
+  mainWindow.on('unmaximize', () => {
+    mainWindow?.webContents.send('window:state', false)
   })
 
   mainWindow.on('ready-to-show', () => {
@@ -115,6 +133,32 @@ if (!gotSingleInstanceLock) {
     registerIpcHandlers()
     createAppMenu()
     createWindow()
+
+    // ---- custom title bar window controls ----
+    ipcMain.on('window:minimize', (event) => {
+      BrowserWindow.fromWebContents(event.sender)?.minimize()
+    })
+    ipcMain.on('window:toggle-maximize', (event) => {
+      const win = BrowserWindow.fromWebContents(event.sender)
+      if (!win) return
+      if (win.isMaximized()) {
+        win.unmaximize()
+      } else {
+        win.maximize()
+      }
+    })
+    ipcMain.on('window:close', (event) => {
+      const win = BrowserWindow.fromWebContents(event.sender)
+      if (!win) return
+      if (win === mainWindow) {
+        readyToClose = true
+      }
+      win.close()
+    })
+    ipcMain.handle('window:is-maximized', (event): boolean => {
+      const win = BrowserWindow.fromWebContents(event.sender)
+      return win ? win.isMaximized() : false
+    })
 
     const initialFile = extractMdPathFromArgv(process.argv)
     if (initialFile && mainWindow) {

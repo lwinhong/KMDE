@@ -1,4 +1,4 @@
-import { BrowserWindow, dialog, ipcMain, protocol, shell } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, protocol, shell } from 'electron'
 import { promises as fs, createReadStream, existsSync, statSync } from 'fs'
 import { join, extname, isAbsolute, resolve, dirname } from 'path'
 import type { AppSettings, FileNode } from '../../shared/types'
@@ -260,18 +260,38 @@ function registerProtocolHandler(): void {
   })
 }
 
+function resolveExportAssetsDir(): string {
+  if (app.isPackaged) {
+    return join(process.resourcesPath, 'export-assets')
+  }
+  return join(app.getAppPath(), 'resources', 'export-assets')
+}
+
+async function copyExportAssets(targetAssetsDir: string): Promise<void> {
+  const src = resolveExportAssetsDir()
+  try {
+    await fs.access(src)
+  } catch {
+    throw new Error('导出资源缺失，请先运行 node scripts/prepare-export-assets.mjs')
+  }
+  await fs.cp(src, targetAssetsDir, { recursive: true })
+}
+
 function registerExportIpc(): void {
   ipcMain.handle('export:saveHtml', async (_e, html: string, outPath: string) => {
     const p = validatePath(outPath)
     await fs.writeFile(p, html, 'utf-8')
+    await copyExportAssets(join(dirname(p), 'KMDE-assets'))
     return p
   })
 
   ipcMain.handle('export:pdf', async (_e, html: string, outPath: string): Promise<string> => {
     const p = validatePath(outPath)
-    const tmpHtml = join(process.env['TEMP'] ?? process.cwd(), `kmde-export-${Date.now()}.html`)
+    const tmpDir = join(process.env['TEMP'] ?? process.cwd(), `kmde-export-${Date.now()}`)
+    await fs.mkdir(tmpDir, { recursive: true })
+    const tmpHtml = join(tmpDir, 'index.html')
     await fs.writeFile(tmpHtml, html, 'utf-8')
-    const { BrowserWindow } = await import('electron')
+    await copyExportAssets(join(tmpDir, 'KMDE-assets'))
     const win = new BrowserWindow({ show: false, webPreferences: { sandbox: true } })
     try {
       await win.loadFile(tmpHtml)
@@ -290,7 +310,7 @@ function registerExportIpc(): void {
       return p
     } finally {
       win.destroy()
-      await fs.rm(tmpHtml, { force: true })
+      await fs.rm(tmpDir, { recursive: true, force: true })
     }
   })
 }

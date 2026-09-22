@@ -57,7 +57,21 @@ const api = {
   onMenuCommand: (callback: (command: MenuCommand) => void): (() => void) =>
     subscribe<MenuCommand>('menu:command', callback),
 
-  getPathForFile: (file: File): string => webUtils.getPathForFile(file)
+  getPathForFile: (file: File): string => webUtils.getPathForFile(file),
+
+  minimizeWindow: (): void => {
+    ipcRenderer.send('window:minimize')
+  },
+  toggleMaximizeWindow: (): void => {
+    ipcRenderer.send('window:toggle-maximize')
+  },
+  closeWindow: (): void => {
+    ipcRenderer.send('window:close')
+  },
+  isWindowMaximized: (): Promise<boolean> => ipcRenderer.invoke('window:is-maximized'),
+  onWindowState: (callback: (maximized: boolean) => void): (() => void) =>
+    subscribe<boolean>('window:state', callback),
+  onAppRequestClose: (callback: () => void): (() => void) => subscribe<void>('app:request-close', callback)
 }
 
 contextBridge.exposeInMainWorld('kmde', api)

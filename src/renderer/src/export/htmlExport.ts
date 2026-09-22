@@ -106,35 +106,37 @@ export interface ExportHtmlOptions {
 export function buildExportHtml(options: ExportHtmlOptions): string {
   const bodyHtml = renderMarkdownHtml(options.markdown, options.docPath)
   const hasMermaid = /<pre[^>]*><code[^>]*language-mermaid/.test(bodyHtml)
-  const hljsTheme = 'https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github.min.css'
-  const katexCss = 'https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css'
-  const hljsScript = 'https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js'
-  const mermaidScript = 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs'
+  const hljsTheme = 'KMDE-assets/hljs/github.min.css'
+  const katexCss = 'KMDE-assets/katex/katex.min.css'
+  const hljsScript = 'KMDE-assets/hljs/hljs-common.min.js'
+  const mermaidScript = 'KMDE-assets/mermaid/mermaid.min.js'
 
   const readyFallback = hasMermaid ? '' : '<script>window.__exportReady = true<\/script>'
 
   const mermaidBoot = hasMermaid
-    ? `<script type="module">
-  try {
-    const mermaid = (await import('${mermaidScript}')).default;
-    mermaid.initialize({ startOnLoad: false, theme: 'neutral', securityLevel: 'loose' });
-    const blocks = Array.from(document.querySelectorAll('pre code.language-mermaid'));
-    for (let i = 0; i < blocks.length; i++) {
-      const b = blocks[i];
-      try {
-        const { svg } = await mermaid.render('kmde-mermaid-' + i, b.textContent || '');
-        const wrap = document.createElement('div');
-        wrap.className = 'mermaid';
-        wrap.innerHTML = svg;
-        b.closest('pre').replaceWith(wrap);
-      } catch (e) {
-        console.warn('mermaid render failed', e);
-      }
-    }
-  } catch (e) {
-    console.warn('mermaid load failed', e);
-  }
-  window.__exportReady = true;
+    ? `<script src="${mermaidScript}"><\/script>
+<script>
+(function () {
+  var m = window.mermaid;
+  if (!m) { window.__exportReady = true; return; }
+  m.initialize({ startOnLoad: false, theme: 'neutral', securityLevel: 'loose' });
+  var blocks = Array.prototype.slice.call(document.querySelectorAll('pre code.language-mermaid'));
+  if (blocks.length === 0) { window.__exportReady = true; return; }
+  var done = 0;
+  function finish() { if (++done === blocks.length) window.__exportReady = true; }
+  blocks.forEach(function (b, i) {
+    m.render('kmde-mermaid-' + i, b.textContent || '').then(function (r) {
+      var wrap = document.createElement('div');
+      wrap.className = 'mermaid';
+      wrap.innerHTML = r.svg;
+      b.closest('pre').replaceWith(wrap);
+      finish();
+    }).catch(function (e) {
+      console.warn('mermaid render failed', e);
+      finish();
+    });
+  });
+})();
 <\/script>`
     : ''
 
@@ -155,7 +157,16 @@ ${bodyHtml}
 </div>
 ${readyFallback}
 <script src="${hljsScript}"><\/script>
-<script>if (window.hljs) { document.querySelectorAll('pre code:not(.language-mermaid)').forEach((b) => { try { hljs.highlightElement(b); } catch (e) {} }); }<\/script>
+<script>
+(function () {
+  var bundle = window.__hljsBundle;
+  var hljs = bundle && (bundle.default || bundle);
+  if (!hljs) return;
+  document.querySelectorAll('pre code:not(.language-mermaid)').forEach(function (el) {
+    try { hljs.highlightElement(el); } catch (e) {}
+  });
+})();
+<\/script>
 ${mermaidBoot}
 </body>
 </html>`
