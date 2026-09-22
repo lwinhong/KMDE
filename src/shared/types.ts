@@ -33,6 +33,8 @@ export interface AppSettings {
   defaultMode: 'wysiwyg' | 'source'
   sidebarVisible: boolean
   outlineVisible: boolean
+  sidebarWidth: number
+  outlineWidth: number
   lastWorkspace: string | null
   language: AppLocale
 }
@@ -43,6 +45,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   defaultMode: 'wysiwyg',
   sidebarVisible: true,
   outlineVisible: true,
+  sidebarWidth: 240,
+  outlineWidth: 220,
   lastWorkspace: null,
   language: 'zh-CN'
 }

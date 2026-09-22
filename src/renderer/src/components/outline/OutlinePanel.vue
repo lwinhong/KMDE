@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { OutlineItem } from '@shared/types'
+import { useSettingsStore } from '../../stores/settings.store'
 
 const props = defineProps<{
   items: OutlineItem[]
@@ -11,6 +12,8 @@ const emit = defineEmits<{
   (e: 'jump', item: OutlineItem): void
 }>()
 
+const settings = useSettingsStore()
+
 const visibleItems = computed(() => props.items.slice(0, 200))
 
 function levelIndent(level: number): string {
@@ -19,8 +22,15 @@ function levelIndent(level: number): string {
 </script>
 
 <template>
-  <aside class="outline-panel">
-    <div class="outline-header">{{ $t('outline.title') }}</div>
+  <aside class="outline-panel" :style="{ width: settings.outlineWidth + 'px' }">
+    <div class="outline-header">
+      <span class="outline-header-title">{{ $t('outline.title') }}</span>
+      <button class="outline-collapse" :title="$t('outline.collapse')" @click="settings.toggleOutline()">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 18l6-6-6-6" />
+        </svg>
+      </button>
+    </div>
     <div class="outline-body">
       <template v-if="visibleItems.length > 0">
         <div
@@ -53,12 +63,40 @@ function levelIndent(level: number): string {
 }
 
 .outline-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding: 8px 12px;
   font-size: 11.5px;
   text-transform: uppercase;
   letter-spacing: 0.8px;
   color: var(--kme-text-3);
   user-select: none;
+}
+
+.outline-header-title {
+  flex: 1;
+}
+
+.outline-collapse {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--kme-text-3);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 4px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.outline-collapse:hover {
+  background: var(--kme-bg-hover);
+  color: var(--kme-text-1);
 }
 
 .outline-body {

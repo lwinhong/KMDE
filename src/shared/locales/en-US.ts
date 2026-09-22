@@ -114,13 +114,17 @@ export default {
     deleteConfirm: 'Delete "{name}"? (It will be moved to the trash)',
     deleteFailed: 'Delete failed: {msg}',
     illegalNameChars: 'Name contains illegal characters {chars}',
-    operationFailed: 'Operation failed: {msg}'
+    operationFailed: 'Operation failed: {msg}',
+    collapse: 'Collapse sidebar',
+    expand: 'Expand sidebar'
   },
   outline: {
     title: 'Outline',
     emptyTitle: '(empty heading)',
     empty1: 'No headings yet',
-    empty2: 'Use # to create headings'
+    empty2: 'Use # to create headings',
+    collapse: 'Collapse outline',
+    expand: 'Expand outline'
   },
   editor: {
     backToEditor: 'Back to Editor',

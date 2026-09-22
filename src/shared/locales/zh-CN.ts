@@ -112,13 +112,17 @@ export default {
     deleteConfirm: '确定删除「{name}」吗？（将移入回收站）',
     deleteFailed: '删除失败: {msg}',
     illegalNameChars: '名称包含非法字符 {chars}',
-    operationFailed: '操作失败: {msg}'
+    operationFailed: '操作失败: {msg}',
+    collapse: '折叠侧边栏',
+    expand: '展开侧边栏'
   },
   outline: {
     title: '大纲',
     emptyTitle: '(空标题)',
     empty1: '暂无标题',
-    empty2: '使用 # 号创建标题'
+    empty2: '使用 # 号创建标题',
+    collapse: '折叠大纲',
+    expand: '展开大纲'
   },
   editor: {
     backToEditor: '返回编辑器',

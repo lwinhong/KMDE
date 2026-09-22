@@ -18,6 +18,7 @@ import CommandPalette, { type PaletteCommand } from '../palette/CommandPalette.v
 import ConflictDialog from '../conflict/ConflictDialog.vue'
 import ExportDialog from '../export/ExportDialog.vue'
 import AboutDialog from './AboutDialog.vue'
+import Resizer from './Resizer.vue'
 
 const settings = useSettingsStore()
 const tabs = useTabsStore()
@@ -319,6 +320,14 @@ function handleOutlineChange(items: OutlineItem[], activeId: string | null): voi
 function handleOutlineJump(item: OutlineItem): void {
   editorAreaRef.value?.jumpTo(item)
 }
+
+function onSidebarResize(delta: number): void {
+  settings.sidebarWidth = Math.min(600, Math.max(160, settings.sidebarWidth + delta))
+}
+
+function onOutlineResize(delta: number): void {
+  settings.outlineWidth = Math.min(600, Math.max(160, settings.outlineWidth + delta))
+}
 </script>
 
 <template>
@@ -332,7 +341,23 @@ function handleOutlineJump(item: OutlineItem): void {
       @close-tab="closeTab"
     />
     <div class="workbench-main">
+      <div
+        v-if="!settings.sidebarVisible"
+        class="panel-edge edge-left"
+        :title="t('sidebar.expand')"
+        @click="settings.toggleSidebar()"
+      >
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 18l6-6-6-6" />
+        </svg>
+      </div>
       <FileTree v-if="settings.sidebarVisible" @open-file="openFileByPath" />
+      <Resizer
+        v-if="settings.sidebarVisible"
+        side="left"
+        @resize="onSidebarResize"
+        @resize-end="settings.persist()"
+      />
       <EditorArea
         v-if="tabs.activeTab"
         ref="editorAreaRef"
@@ -347,12 +372,28 @@ function handleOutlineJump(item: OutlineItem): void {
         @new-file="newFile()"
         @resume-workspace="openLastWorkspace"
       />
+      <Resizer
+        v-if="settings.outlineVisible && tabs.activeTab"
+        side="right"
+        @resize="onOutlineResize"
+        @resize-end="settings.persist()"
+      />
       <OutlinePanel
         v-if="settings.outlineVisible && tabs.activeTab"
         :items="outlineItems"
         :active-id="outlineActiveId"
         @jump="handleOutlineJump"
       />
+      <div
+        v-if="!settings.outlineVisible && tabs.activeTab"
+        class="panel-edge edge-right"
+        :title="t('outline.expand')"
+        @click="settings.toggleOutline()"
+      >
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M15 18l-6-6 6-6" />
+        </svg>
+      </div>
     </div>
     <StatusBar />
     <CommandPalette ref="paletteRef" :commands="paletteCommands" @run-command="runPaletteCommand" @open-file="openFileByPath" />
@@ -376,5 +417,30 @@ function handleOutlineJump(item: OutlineItem): void {
   display: flex;
   min-height: 0;
   overflow: hidden;
+}
+
+.panel-edge {
+  width: 28px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--kme-bg-sidebar);
+  color: var(--kme-text-3);
+  cursor: pointer;
+  user-select: none;
+}
+
+.panel-edge.edge-left {
+  border-right: 1px solid var(--kme-border-light);
+}
+
+.panel-edge.edge-right {
+  border-left: 1px solid var(--kme-border-light);
+}
+
+.panel-edge:hover {
+  background: var(--kme-bg-hover);
+  color: var(--kme-text-1);
 }
 </style>

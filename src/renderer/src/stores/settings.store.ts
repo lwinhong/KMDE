@@ -44,6 +44,14 @@ export const useSettingsStore = defineStore('settings', {
     toggleOutline(): void {
       this.outlineVisible = !this.outlineVisible
       this.persist()
+    },
+    setSidebarWidth(width: number): void {
+      this.sidebarWidth = Math.min(600, Math.max(160, Math.round(width)))
+      this.persist()
+    },
+    setOutlineWidth(width: number): void {
+      this.outlineWidth = Math.min(600, Math.max(160, Math.round(width)))
+      this.persist()
     }
   }
 })

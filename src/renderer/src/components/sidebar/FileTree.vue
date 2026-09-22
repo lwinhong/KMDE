@@ -5,6 +5,7 @@ import type { DropdownOption } from 'naive-ui'
 import { useI18n } from 'vue-i18n'
 import type { FileNode } from '@shared/types'
 import { useWorkspaceStore } from '../../stores/workspace.store'
+import { useSettingsStore } from '../../stores/settings.store'
 import { dirname, joinPath } from '../../stores/pathUtils'
 import FileTreeNode, { type TreeController } from './FileTreeNode.vue'
 
@@ -13,6 +14,7 @@ const emit = defineEmits<{
 }>()
 
 const workspace = useWorkspaceStore()
+const settings = useSettingsStore()
 const message = useMessage()
 const { t } = useI18n()
 
@@ -216,18 +218,23 @@ onMounted(() => {
 </script>
 
 <template>
-  <aside class="filetree">
+  <aside class="filetree" :style="{ width: settings.sidebarWidth + 'px' }">
     <div class="filetree-header">
       <span class="filetree-title" :title="workspace.root ?? ''">{{ workspace.rootName || $t('sidebar.explorer') }}</span>
       <span class="filetree-actions">
         <button class="filetree-action" :title="$t('sidebar.newFile')" @click="newFileAtRoot">
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M12 5v14M5 12h14" />
           </svg>
         </button>
         <button class="filetree-action" :title="$t('sidebar.refresh')" @click="refreshRoot">
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6" />
+          </svg>
+        </button>
+        <button class="filetree-action" :title="$t('sidebar.collapse')" @click="settings.toggleSidebar()">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M15 18l-6-6 6-6" />
           </svg>
         </button>
       </span>
@@ -319,8 +326,8 @@ onMounted(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
+  width: 26px;
+  height: 26px;
   border: none;
   border-radius: var(--kme-radius-sm);
   background: transparent;
