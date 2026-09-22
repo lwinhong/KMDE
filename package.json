@@ -4,6 +4,7 @@
   "description": "KMDE - a Typora-style markdown editor built with Electron + Vue 3 + Tiptap",
   "main": "out/main/index.js",
   "author": "liyk",
+  "license": "MIT",
   "private": true,
   "scripts": {
     "dev": "electron-vite dev",
