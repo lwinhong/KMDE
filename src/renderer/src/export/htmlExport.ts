@@ -1,6 +1,7 @@
 import { Editor } from '@tiptap/core'
 import { buildExportExtensions } from '../components/editor/tiptap/extensions'
 import { dirname } from '@/stores/pathUtils'
+import { t, i18n } from '@/i18n'
 
 export function escapeHtml(text: string): string {
   return text
@@ -141,7 +142,7 @@ export function buildExportHtml(options: ExportHtmlOptions): string {
     : ''
 
   return `<!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="${i18n.global.locale.value}">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -153,7 +154,7 @@ export function buildExportHtml(options: ExportHtmlOptions): string {
 <body>
 <div class="page">
 ${bodyHtml}
-<div class="kmde-footer">由 KMDE 导出</div>
+<div class="kmde-footer">${t('export.footer')}</div>
 </div>
 ${readyFallback}
 <script src="${hljsScript}"><\/script>

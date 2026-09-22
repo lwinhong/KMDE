@@ -2,7 +2,7 @@
   <ToolbarGroup>
     <ToolbarDropdown>
       <template #trigger="{ toggle }">
-        <ToolbarButton :is-active="isActive" title="标题" dropdown @click="toggle">
+        <ToolbarButton :is-active="isActive" :title="$t('editor.heading')" dropdown @click="toggle">
           <HeadingIcon size="16" />
           <ChevronDownIcon class="dropdown-arrow" />
         </ToolbarButton>
@@ -15,14 +15,14 @@
           @click="toggleHeading(level); close()"
         >
           <span :class="`dropdown-item-heading h${level}`">H{{ level }}</span>
-          <span class="dropdown-item-label">标题 {{ level }}</span>
+          <span class="dropdown-item-label">{{ $t('editor.headingN', { level }) }}</span>
         </button>
         <button
           :class="['dropdown-item', editor?.isActive('paragraph') && !isActive && 'is-active']"
           @click="setParagraph(); close()"
         >
           <span class="dropdown-item-heading h0">¶</span>
-          <span class="dropdown-item-label">正文</span>
+          <span class="dropdown-item-label">{{ $t('editor.paragraph') }}</span>
         </button>
       </template>
     </ToolbarDropdown>

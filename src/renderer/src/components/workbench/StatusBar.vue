@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useSettingsStore } from '../../stores/settings.store'
 import { useTabsStore } from '../../stores/tabs.store'
 import { useWorkspaceStore } from '../../stores/workspace.store'
@@ -7,6 +8,7 @@ import { useWorkspaceStore } from '../../stores/workspace.store'
 const settings = useSettingsStore()
 const tabs = useTabsStore()
 const workspace = useWorkspaceStore()
+const { t } = useI18n()
 
 const charCount = computed(() => {
   const tab = tabs.activeTab
@@ -14,27 +16,27 @@ const charCount = computed(() => {
   return tab.markdown.replace(/\s/g, '').length
 })
 
-const modeLabel = computed(() => (tabs.activeTab?.mode === 'source' ? '源码模式' : '所见即所得'))
+const modeLabel = computed(() => (tabs.activeTab?.mode === 'source' ? t('statusbar.sourceMode') : t('statusbar.wysiwygMode')))
 </script>
 
 <template>
   <div class="statusbar">
     <div class="statusbar-left">
       <span v-if="tabs.activeTab" class="statusbar-item" :title="tabs.activeTab.path ?? ''">
-        {{ tabs.activeTab.path ?? '未保存' }}
-        <template v-if="tabs.activeTab.deleted">（文件已删除）</template>
+        {{ tabs.activeTab.path ?? $t('statusbar.unsaved') }}
+        <template v-if="tabs.activeTab.deleted">{{ $t('statusbar.fileDeleted') }}</template>
       </span>
       <span v-else class="statusbar-item">KMDE</span>
       <span v-if="workspace.isOpen" class="statusbar-item" :title="workspace.root ?? ''">
-        工作区: {{ workspace.rootName }}
-        <template v-if="workspace.indexing">（索引中…）</template>
+        {{ $t('statusbar.workspace', { name: workspace.rootName }) }}
+        <template v-if="workspace.indexing">{{ $t('statusbar.indexing') }}</template>
       </span>
     </div>
     <div class="statusbar-right">
-      <span v-if="tabs.activeTab" class="statusbar-item">{{ charCount }} 字</span>
+      <span v-if="tabs.activeTab" class="statusbar-item">{{ $t('statusbar.charCount', { count: charCount }) }}</span>
       <span v-if="tabs.activeTab" class="statusbar-item">{{ modeLabel }}</span>
-      <button class="statusbar-btn" title="切换主题 (F11)" @click="settings.toggleTheme()">
-        {{ settings.isDark ? '🌙 深色' : '☀️ 浅色' }}
+      <button class="statusbar-btn" :title="$t('statusbar.toggleTheme')" @click="settings.toggleTheme()">
+        {{ settings.isDark ? $t('statusbar.dark') : $t('statusbar.light') }}
       </button>
     </div>
   </div>

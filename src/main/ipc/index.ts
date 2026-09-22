@@ -2,8 +2,9 @@ import { app, BrowserWindow, dialog, ipcMain, protocol, shell } from 'electron'
 import { promises as fs, createReadStream, existsSync, statSync } from 'fs'
 import { join, extname, isAbsolute, resolve, dirname } from 'path'
 import type { AppSettings, FileNode } from '../../shared/types'
-import { DEFAULT_SETTINGS } from '../../shared/types'
 import { WatcherManager } from '../watcher'
+import { t } from '../i18n'
+import { readSettings, writeSettings } from '../settings'
 
 export function sendToRenderer(channel: string, ...args: unknown[]): void {
   const win = BrowserWindow.getAllWindows().find((w) => !w.isDestroyed())
@@ -16,26 +17,17 @@ const watcherManager = new WatcherManager((event) => {
   sendToRenderer('fs:event', event)
 })
 
-let settingsPath = ''
-
-function getSettingsPath(): string {
-  if (!settingsPath) {
-    settingsPath = join(process.env['APPDATA'] ?? process.cwd(), 'kmde', 'settings.json')
-  }
-  return settingsPath
-}
-
 function isIgnoredName(name: string): boolean {
   return name === 'node_modules' || name === '.git' || name === 'dist' || name === 'out' || name === '.hvigor'
 }
 
 function validatePath(p: unknown): string {
   if (typeof p !== 'string' || p.length === 0 || p.includes('\0')) {
-    throw new Error('非法路径')
+    throw new Error(t('errors.illegalPath'))
   }
   const resolved = resolve(p)
   if (!isAbsolute(resolved)) {
-    throw new Error('路径必须是绝对路径')
+    throw new Error(t('errors.mustBeAbsolute'))
   }
   return resolved
 }
@@ -78,8 +70,8 @@ function registerFsIpc(): void {
       (async () => {
         const p = validatePath(path)
         const stats = await fs.stat(p)
-        if (!stats.isFile()) throw new Error('不是文件')
-        if (stats.size > 64 * 1024 * 1024) throw new Error('文件过大（>64MB），无法打开')
+        if (!stats.isFile()) throw new Error(t('errors.notAFile'))
+        if (stats.size > 64 * 1024 * 1024) throw new Error(t('errors.fileTooLarge'))
         const content = await fs.readFile(p, 'utf-8')
         return { content, mtimeMs: stats.mtimeMs }
       })()
@@ -114,10 +106,10 @@ function registerFsIpc(): void {
       (async () => {
         const dir = validatePath(parentDir)
         if (typeof name !== 'string' || name.length === 0 || /[\\/:*?"<>|]/.test(name)) {
-          throw new Error('非法名称')
+          throw new Error(t('errors.illegalName'))
         }
         const target = join(dir, name)
-        if (existsSync(target)) throw new Error('同名文件或文件夹已存在')
+        if (existsSync(target)) throw new Error(t('errors.entryExists'))
         if (type === 'file') {
           await fs.writeFile(target, '', 'utf-8')
         } else {
@@ -131,7 +123,7 @@ function registerFsIpc(): void {
     (async () => {
       const from = validatePath(oldPath)
       const to = validatePath(newPath)
-      if (existsSync(to)) throw new Error('目标已存在')
+      if (existsSync(to)) throw new Error(t('errors.targetExists'))
       await fs.rename(from, to)
       return true
     })()
@@ -176,11 +168,11 @@ function registerFsIpc(): void {
 function registerDialogIpc(): void {
   ipcMain.handle('dialog:openFile', async () => {
     const result = await dialog.showOpenDialog({
-      title: '打开 Markdown 文件',
+      title: t('dialog.openMdFile'),
       properties: ['openFile'],
       filters: [
         { name: 'Markdown', extensions: ['md', 'markdown', 'mdown', 'txt'] },
-        { name: '所有文件', extensions: ['*'] }
+        { name: t('dialog.allFiles'), extensions: ['*'] }
       ]
     })
     return result.canceled ? null : result.filePaths[0]
@@ -188,7 +180,7 @@ function registerDialogIpc(): void {
 
   ipcMain.handle('dialog:openFolder', async () => {
     const result = await dialog.showOpenDialog({
-      title: '打开文件夹',
+      title: t('dialog.openFolder'),
       properties: ['openDirectory']
     })
     return result.canceled ? null : result.filePaths[0]
@@ -196,7 +188,7 @@ function registerDialogIpc(): void {
 
   ipcMain.handle('dialog:saveAs', async (_e, defaultName: string) => {
     const result = await dialog.showSaveDialog({
-      title: '另存为',
+      title: t('dialog.saveAs'),
       defaultPath: typeof defaultName === 'string' ? defaultName : 'untitled.md',
       filters: [{ name: 'Markdown', extensions: ['md', 'markdown'] }]
     })
@@ -205,19 +197,10 @@ function registerDialogIpc(): void {
 }
 
 function registerSettingsIpc(): void {
-  ipcMain.handle('settings:load', async (): Promise<AppSettings> => {
-    try {
-      const raw = await fs.readFile(getSettingsPath(), 'utf-8')
-      const parsed = JSON.parse(raw) as Partial<AppSettings>
-      return { ...DEFAULT_SETTINGS, ...parsed }
-    } catch {
-      return { ...DEFAULT_SETTINGS }
-    }
-  })
+  ipcMain.handle('settings:load', async (): Promise<AppSettings> => readSettings())
 
   ipcMain.handle('settings:save', async (_e, settings: AppSettings) => {
-    await fs.mkdir(dirname(getSettingsPath()), { recursive: true })
-    await fs.writeFile(getSettingsPath(), JSON.stringify(settings, null, 2), 'utf-8')
+    await writeSettings(settings)
     return true
   })
 }
@@ -272,7 +255,7 @@ async function copyExportAssets(targetAssetsDir: string): Promise<void> {
   try {
     await fs.access(src)
   } catch {
-    throw new Error('导出资源缺失，请先运行 node scripts/prepare-export-assets.mjs')
+    throw new Error(t('errors.exportAssetsMissing'))
   }
   await fs.cp(src, targetAssetsDir, { recursive: true })
 }

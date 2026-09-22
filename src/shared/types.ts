@@ -23,6 +23,10 @@ export interface FsEvent {
   mtimeMs?: number
 }
 
+export type AppLocale = 'zh-CN' | 'en-US'
+
+export const APP_LOCALES: AppLocale[] = ['zh-CN', 'en-US']
+
 export interface AppSettings {
   theme: 'light' | 'dark'
   fontSize: number
@@ -30,6 +34,7 @@ export interface AppSettings {
   sidebarVisible: boolean
   outlineVisible: boolean
   lastWorkspace: string | null
+  language: AppLocale
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -38,7 +43,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   defaultMode: 'wysiwyg',
   sidebarVisible: true,
   outlineVisible: true,
-  lastWorkspace: null
+  lastWorkspace: null,
+  language: 'zh-CN'
 }
 
 export interface OutlineItem {
@@ -66,6 +72,7 @@ export type MenuCommand =
   | 'command-palette'
   | 'close-tab'
   | 'show-settings-info'
+  | `set-language:${AppLocale}`
 
 export const MAX_WYSIWYG_FILE_SIZE = 2 * 1024 * 1024
 

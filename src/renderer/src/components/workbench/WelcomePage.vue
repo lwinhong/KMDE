@@ -15,21 +15,21 @@ defineEmits<{
   <div class="welcome">
     <div class="welcome-hero">
       <div class="welcome-logo">KMDE</div>
-      <div class="welcome-subtitle">Knowledge Markdown Editor</div>
-      <div class="welcome-hint">所见即所得 · 源码模式 · 文件关联</div>
+      <div class="welcome-subtitle">{{ $t('welcome.subtitle') }}</div>
+      <div class="welcome-hint">{{ $t('welcome.hint') }}</div>
     </div>
     <div class="welcome-actions">
-      <button class="welcome-btn primary" @click="$emit('open-file')">打开文件</button>
-      <button class="welcome-btn primary" @click="$emit('open-folder')">打开文件夹</button>
-      <button class="welcome-btn" @click="$emit('new-file')">新建文件</button>
+      <button class="welcome-btn primary" @click="$emit('open-file')">{{ $t('welcome.openFile') }}</button>
+      <button class="welcome-btn primary" @click="$emit('open-folder')">{{ $t('welcome.openFolder') }}</button>
+      <button class="welcome-btn" @click="$emit('new-file')">{{ $t('welcome.newFile') }}</button>
       <button v-if="settings.lastWorkspace" class="welcome-btn" @click="$emit('resume-workspace')">
-        恢复上次工作区
+        {{ $t('welcome.resumeWorkspace') }}
       </button>
     </div>
     <div class="welcome-tips">
-      <div class="welcome-tip">提示：安装后双击 .md 文件可直接用 KMDE 打开</div>
-      <div class="welcome-tip">Ctrl+P 快速打开文件 · Ctrl+/ 切换源码模式 · Ctrl+Shift+P 命令面板</div>
-      <div class="welcome-tip">也可以直接把 .md 文件拖入窗口</div>
+      <div class="welcome-tip">{{ $t('welcome.tip1') }}</div>
+      <div class="welcome-tip">{{ $t('welcome.tip2') }}</div>
+      <div class="welcome-tip">{{ $t('welcome.tip3') }}</div>
     </div>
   </div>
 </template>

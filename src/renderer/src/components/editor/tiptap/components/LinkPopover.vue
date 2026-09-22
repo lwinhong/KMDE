@@ -1,31 +1,31 @@
 <template>
   <ToolbarDropdown align-right>
     <template #trigger="{ toggle }">
-      <ToolbarButton :is-active="editor?.isActive('link')" title="链接" @click="handleToggle(toggle)">
+      <ToolbarButton :is-active="editor?.isActive('link')" :title="$t('editor.link')" @click="handleToggle(toggle)">
         <LinkIcon :size="size" />
       </ToolbarButton>
     </template>
     <template #default="{ close }">
       <div class="link-popover" @click.stop>
         <div class="link-form-row" v-if="!hasSelection">
-          <label class="link-form-label">标题</label>
-          <input v-model="linkTitle" type="text" placeholder="链接标题（可选）" class="link-form-input" />
+          <label class="link-form-label">{{ $t('editor.titleLabel') }}</label>
+          <input v-model="linkTitle" type="text" :placeholder="$t('editor.linkTitlePlaceholder')" class="link-form-input" />
         </div>
         <div class="link-form-row">
           <label class="link-form-label">URL</label>
-          <input ref="inputRef" v-model="linkUrl" type="url" placeholder="输入链接地址..." class="link-form-input"
+          <input ref="inputRef" v-model="linkUrl" type="url" :placeholder="$t('editor.linkUrlPlaceholder')" class="link-form-input"
             @keydown.enter.prevent="doSetLink(close)" />
         </div>
         <div class="link-form-actions">
-          <button v-if="editor?.isActive('link')" class="link-form-btn" title="在新窗口打开" @click="openLink">
+          <button v-if="editor?.isActive('link')" class="link-form-btn" :title="$t('editor.openInNewWindow')" @click="openLink">
             <ExternalLinkIcon size="16" />
           </button>
-          <button v-if="editor?.isActive('link')" class="link-form-btn danger" title="移除链接" @click="removeLink(close)">
+          <button v-if="editor?.isActive('link')" class="link-form-btn danger" :title="$t('editor.removeLink')" @click="removeLink(close)">
             <TrashIcon size="16" />
           </button>
           <span class="link-form-divider-v" />
-          <button class="link-form-btn" @click="close">关闭</button>
-          <button class="link-form-btn confirm" :disabled="!linkUrl.trim()" @click="doSetLink(close)">确定</button>
+          <button class="link-form-btn" @click="close">{{ $t('common.close') }}</button>
+          <button class="link-form-btn confirm" :disabled="!linkUrl.trim()" @click="doSetLink(close)">{{ $t('common.ok') }}</button>
         </div>
       </div>
     </template>

@@ -1,10 +1,15 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
-import { NConfigProvider, NDialogProvider, NMessageProvider, darkTheme, zhCN, dateZhCN } from 'naive-ui'
+import { computed, onMounted } from 'vue'
+import { NConfigProvider, NDialogProvider, NMessageProvider, darkTheme, zhCN, dateZhCN, enUS, dateEnUS } from 'naive-ui'
+import type { GlobalTheme } from 'naive-ui'
 import { useSettingsStore } from './stores/settings.store'
 import WorkbenchLayout from './components/workbench/WorkbenchLayout.vue'
 
 const settings = useSettingsStore()
+
+const naiveLocale = computed(() => (settings.language === 'en-US' ? enUS : zhCN))
+const naiveDateLocale = computed(() => (settings.language === 'en-US' ? dateEnUS : dateZhCN))
+const naiveTheme = computed<GlobalTheme | null>(() => (settings.isDark ? darkTheme : null))
 
 onMounted(() => {
   void settings.load()
@@ -13,9 +18,9 @@ onMounted(() => {
 
 <template>
   <n-config-provider
-    :theme="settings.isDark ? darkTheme : null"
-    :locale="zhCN"
-    :date-locale="dateZhCN"
+    :theme="naiveTheme"
+    :locale="naiveLocale"
+    :date-locale="naiveDateLocale"
     :theme-overrides="{
       common: {
         primaryColor: settings.isDark ? '#60a5fa' : '#2563eb',

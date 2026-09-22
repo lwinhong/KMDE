@@ -20,7 +20,7 @@ function levelIndent(level: number): string {
 
 <template>
   <aside class="outline-panel">
-    <div class="outline-header">大纲</div>
+    <div class="outline-header">{{ $t('outline.title') }}</div>
     <div class="outline-body">
       <template v-if="visibleItems.length > 0">
         <div
@@ -33,10 +33,10 @@ function levelIndent(level: number): string {
           @click="emit('jump', item)"
         >
           <span class="outline-marker">H{{ item.level }}</span>
-          <span class="outline-text">{{ item.text || '(空标题)' }}</span>
+          <span class="outline-text">{{ item.text || $t('outline.emptyTitle') }}</span>
         </div>
       </template>
-      <div v-else class="outline-empty">暂无标题<br />使用 # 号创建标题</div>
+      <div v-else class="outline-empty">{{ $t('outline.empty1') }}<br />{{ $t('outline.empty2') }}</div>
     </div>
   </aside>
 </template>

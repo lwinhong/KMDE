@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
+import { ref, onMounted, onBeforeUnmount, computed, h } from 'vue'
 import { NDropdown } from 'naive-ui'
 import type { DropdownOption } from 'naive-ui'
-import type { MenuCommand } from '@shared/types'
+import { useI18n } from 'vue-i18n'
+import type { MenuCommand, AppLocale } from '@shared/types'
 import { useTabsStore } from '@/stores/tabs.store'
+import { useSettingsStore } from '@/stores/settings.store'
 
 const emit = defineEmits<{
   (e: 'command', command: MenuCommand): void
@@ -11,6 +13,8 @@ const emit = defineEmits<{
 }>()
 
 const tabs = useTabsStore()
+const settings = useSettingsStore()
+const { t } = useI18n()
 
 const title = computed(() => {
   const tab = tabs.activeTab
@@ -56,54 +60,75 @@ interface MenuDef {
 const div = (key: string): DropdownOption => ({ type: 'divider', key })
 
 function item(key: MenuCommand | 'quit' | 'reload' | 'tiptap-site', label: string, shortcut?: string): DropdownOption {
-  return { key, label: shortcut ? `${label}    ${shortcut}` : label }
+  if (!shortcut) {
+    return { key, label }
+  }
+  return {
+    key,
+    // label accepts a render function: text left, shortcut right-aligned & dimmed
+    label: () =>
+      h('div', { class: 'titlebar-menu-row' }, [
+        h('span', { class: 'titlebar-menu-text' }, label),
+        h('span', { class: 'titlebar-menu-key' }, shortcut)
+      ])
+  }
+}
+
+function languageItem(locale: AppLocale, label: string): DropdownOption {
+  return { key: `set-language:${locale}`, label: settings.language === locale ? `✓ ${label}` : label }
 }
 
 const menus = computed<DropdownOption[]>(() => [
   {
     key: 'file',
-    label: '文件',
+    label: t('menu.file'),
     children: [
-      item('new-file', '新建文件', 'Ctrl+N'),
+      item('new-file', t('menu.newFile'), 'Ctrl+N'),
       div('f1'),
-      item('open-file', '打开文件…', 'Ctrl+O'),
-      item('open-folder', '打开文件夹…', 'Ctrl+Shift+O'),
+      item('open-file', t('menu.openFile'), 'Ctrl+O'),
+      item('open-folder', t('menu.openFolder'), 'Ctrl+Shift+O'),
       div('f2'),
-      item('save', '保存', 'Ctrl+S'),
-      item('save-as', '另存为…', 'Ctrl+Shift+S'),
+      item('save', t('menu.save'), 'Ctrl+S'),
+      item('save-as', t('menu.saveAs'), 'Ctrl+Shift+S'),
       div('f3'),
-      item('export', '导出…', 'Ctrl+Shift+E'),
+      item('export', t('menu.export'), 'Ctrl+Shift+E'),
       div('f4'),
-      item('quit', '退出', 'Ctrl+Q')
+      item('quit', t('menu.quit'), 'Ctrl+Q')
     ]
   },
   {
     key: 'edit',
-    label: '编辑',
+    label: t('menu.edit'),
     children: [
-      item('close-tab', '关闭标签页', 'Ctrl+W'),
+      item('close-tab', t('menu.closeTab'), 'Ctrl+W'),
       div('e1'),
-      item('command-palette', '命令面板', 'Ctrl+Shift+P'),
-      item('quick-open', '快速打开文件…', 'Ctrl+P')
+      item('command-palette', t('menu.commandPalette'), 'Ctrl+Shift+P'),
+      item('quick-open', t('menu.quickOpen'), 'Ctrl+P')
     ]
   },
   {
     key: 'view',
-    label: '视图',
+    label: t('menu.view'),
     children: [
-      item('toggle-mode', '切换 源码/所见即所得 模式', 'Ctrl+/'),
+      item('toggle-mode', t('menu.toggleMode'), 'Ctrl+/'),
       div('v1'),
-      item('toggle-sidebar', '侧边栏', 'Ctrl+\\'),
-      item('toggle-outline', '大纲面板', 'Ctrl+Shift+U'),
-      item('toggle-theme', '深色/浅色主题', 'F11'),
+      item('toggle-sidebar', t('workbench.sidebar'), 'Ctrl+\\'),
+      item('toggle-outline', t('workbench.outlinePanel'), 'Ctrl+Shift+U'),
+      item('toggle-theme', t('workbench.theme'), 'F11'),
       div('v2'),
-      item('reload', '重新加载', 'Ctrl+R')
+      {
+        key: 'language',
+        label: t('menu.language'),
+        children: [languageItem('zh-CN', t('settings.languageZh')), languageItem('en-US', t('settings.languageEn'))]
+      },
+      div('v3'),
+      item('reload', t('menu.reload'), 'Ctrl+R')
     ]
   },
   {
     key: 'help',
-    label: '帮助',
-    children: [item('about', '关于 KMDE'), item('tiptap-site', 'Tiptap 官网')]
+    label: t('menu.help'),
+    children: [item('about', t('menu.aboutKmde')), item('tiptap-site', t('menu.tiptapSite'))]
   }
 ])
 
@@ -141,6 +166,7 @@ function onMenuSelect(key: string | number): void {
       <NDropdown
         v-for="menu in menus"
         :key="menu.key"
+        size="small"
         trigger="click"
         :options="(menu as DropdownOption).children"
         placement="bottom-start"
@@ -154,10 +180,10 @@ function onMenuSelect(key: string | number): void {
     <div class="title-bar-title" :title="title">{{ title }}</div>
 
     <div class="title-bar-controls">
-      <button class="title-bar-ctl" title="最小化" @click="minimize">
+      <button class="title-bar-ctl" :title="$t('workbench.minimize')" @click="minimize">
         <svg width="11" height="11" viewBox="0 0 11 11"><path d="M1 5.5 h9" stroke="currentColor" stroke-width="1" /></svg>
       </button>
-      <button class="title-bar-ctl" :title="maximized ? '还原' : '最大化'" @click="toggleMaximize">
+      <button class="title-bar-ctl" :title="maximized ? $t('workbench.restore') : $t('workbench.maximize')" @click="toggleMaximize">
         <svg v-if="!maximized" width="11" height="11" viewBox="0 0 11 11">
           <rect x="1.5" y="1.5" width="8" height="8" fill="none" stroke="currentColor" stroke-width="1" />
         </svg>
@@ -166,7 +192,7 @@ function onMenuSelect(key: string | number): void {
           <path d="M3.5 3.5 V1.5 h6 v6 h-2" fill="none" stroke="currentColor" stroke-width="1" />
         </svg>
       </button>
-      <button class="title-bar-ctl title-bar-close" title="关闭" @click="requestClose">
+      <button class="title-bar-ctl title-bar-close" :title="$t('common.close')" @click="requestClose">
         <svg width="11" height="11" viewBox="0 0 11 11">
           <path d="M1.5 1.5 L9.5 9.5 M9.5 1.5 L1.5 9.5" stroke="currentColor" stroke-width="1.1" />
         </svg>
@@ -261,5 +287,27 @@ function onMenuSelect(key: string | number): void {
 .title-bar-close:hover {
   background: #e81123;
   color: #ffffff;
+}
+</style>
+
+<style>
+.titlebar-menu-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 40px;
+  width: 100%;
+}
+
+.titlebar-menu-text {
+  flex-shrink: 0;
+  color: inherit;
+}
+
+.titlebar-menu-key {
+  flex-shrink: 0;
+  font-size: 11.5px;
+  letter-spacing: 0.2px;
+  color: var(--kme-text-3);
 }
 </style>

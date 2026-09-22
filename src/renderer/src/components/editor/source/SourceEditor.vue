@@ -201,7 +201,7 @@ watch(
   }
 )
 
-defineExpose({ flush, jumpTo })
+defineExpose({ flush, jumpTo, emitOutline })
 </script>
 
 <template>

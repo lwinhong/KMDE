@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import type { IpcRendererEvent } from 'electron'
 import type {
+  AppLocale,
   AppSettings,
   FileNode,
   FsEvent,
@@ -46,6 +47,7 @@ const api = {
   loadSettings: (): Promise<AppSettings> => ipcRenderer.invoke('settings:load'),
   saveSettings: (settings: AppSettings): Promise<boolean> =>
     ipcRenderer.invoke('settings:save', settings),
+  setLocale: (locale: AppLocale): Promise<boolean> => ipcRenderer.invoke('app:set-locale', locale),
 
   exportHtml: (html: string, outPath: string): Promise<string> =>
     ipcRenderer.invoke('export:saveHtml', html, outPath),

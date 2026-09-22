@@ -21,6 +21,7 @@ import { PasteExtension } from './extensions/PasteExtension.js'
 import { Placeholder } from '@tiptap/extensions'
 import MermaidCodeBlock from './components/MermaidCodeBlock.vue'
 import { toFileUrl, dirname, joinPath } from '@/stores/pathUtils'
+import { t } from '@/i18n'
 
 export function resolveImgSrc(src: string, docPath: string | null): string {
   if (!src) return ''
@@ -137,9 +138,9 @@ export function buildEditorExtensions(docPath: string | null): Extensions {
     Placeholder.configure({
       placeholder: ({ node }: { node: { type: { name: string }; attrs: { level?: number } } }) => {
         if (node.type.name === 'heading') {
-          return `标题 ${node.attrs.level ?? ''}`
+          return t('editor.headingN', { level: node.attrs.level ?? '' })
         }
-        return "输入 '/' 获取命令，或直接开始输入..."
+        return t('editor.placeholderBody')
       },
       showOnlyWhenEditable: true,
       showOnlyCurrent: true

@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { DEFAULT_SETTINGS } from '@shared/types'
-import type { AppSettings } from '@shared/types'
+import type { AppSettings, AppLocale } from '@shared/types'
+import { i18n } from '@/i18n'
 
 export const useSettingsStore = defineStore('settings', {
   state: (): AppSettings => ({ ...DEFAULT_SETTINGS }),
@@ -15,10 +16,18 @@ export const useSettingsStore = defineStore('settings', {
       } catch {
         // keep defaults
       }
+      i18n.global.locale.value = this.language
       this.applyThemeClass()
     },
     persist(): void {
       void window.kmde.saveSettings({ ...this.$state })
+    },
+    setLanguage(locale: AppLocale): void {
+      if (this.language === locale) return
+      this.language = locale
+      i18n.global.locale.value = locale
+      this.persist()
+      void window.kmde.setLocale(locale)
     },
     applyThemeClass(): void {
       document.documentElement.classList.toggle('dark', this.isDark)

@@ -3,6 +3,7 @@ import { basename, dirname, extname } from './pathUtils'
 import { MAX_WYSIWYG_FILE_SIZE } from '@shared/types'
 import type { EditorMode } from '@shared/types'
 import { useSettingsStore } from './settings.store'
+import { t } from '@/i18n'
 
 export interface EditorTab {
   id: string
@@ -14,6 +15,7 @@ export interface EditorTab {
   savedMtimeMs: number
   deleted: boolean
   reloadToken: number
+  loading: boolean
 }
 
 export interface TabConflict {
@@ -53,39 +55,64 @@ export const useTabsStore = defineStore('tabs', {
 
     async openPath(path: string): Promise<EditorTab | null> {
       const settings = useSettingsStore()
+      const existing = this.byPath(path)
+      if (existing) {
+        this.activeTabId = existing.id
+        existing.deleted = false
+        if (!existing.loading && !existing.dirty) {
+          void this.reloadFromDisk(existing)
+        }
+        return existing
+      }
+      // two-phase open: mount the tab immediately with a skeleton, fill content once read
+      const tab: EditorTab = {
+        id: `tab-${++tabSeq}`,
+        path,
+        fileName: basename(path),
+        markdown: '',
+        dirty: false,
+        mode: settings.defaultMode,
+        savedMtimeMs: 0,
+        deleted: false,
+        reloadToken: 0,
+        loading: true
+      }
+      this.tabs.push(tab)
+      this.activeTabId = tab.id
+      // grab the reactive proxy stored in state: mutating the raw object
+      // would bypass reactivity and leave the skeleton stuck forever
+      const staged = this.byPath(path)
       try {
         const { content, mtimeMs } = await window.kmde.readFile(path)
-        const existing = this.byPath(path)
-        if (existing) {
-          this.activeTabId = existing.id
-          existing.deleted = false
-          // reload from disk only when not dirty
-          if (!existing.dirty && content !== existing.markdown) {
-            existing.markdown = content
-            existing.savedMtimeMs = mtimeMs
-            existing.reloadToken++
-          }
-          return existing
+        if (staged) {
+          staged.markdown = content
+          staged.savedMtimeMs = mtimeMs
+          staged.mode = content.length > MAX_WYSIWYG_FILE_SIZE ? 'source' : settings.defaultMode
         }
-        const mode: EditorMode =
-          content.length > MAX_WYSIWYG_FILE_SIZE ? 'source' : settings.defaultMode
-        const tab: EditorTab = {
-          id: `tab-${++tabSeq}`,
-          path,
-          fileName: basename(path),
-          markdown: content,
-          dirty: false,
-          mode,
-          savedMtimeMs: mtimeMs,
-          deleted: false,
-          reloadToken: 0
-        }
-        this.tabs.push(tab)
-        this.activeTabId = tab.id
-        return tab
       } catch (err) {
+        this.removeTab(tab.id)
         console.error('[tabs] open failed:', path, err)
         throw err
+      } finally {
+        if (staged) staged.loading = false
+      }
+      return tab
+    },
+
+    async reloadFromDisk(tab: EditorTab): Promise<void> {
+      if (!tab.path) return
+      try {
+        const { content, mtimeMs } = await window.kmde.readFile(tab.path)
+        if (!this.tabs.includes(tab) || tab.dirty || tab.loading) return
+        if (content !== tab.markdown) {
+          tab.markdown = content
+          tab.savedMtimeMs = mtimeMs
+          tab.reloadToken++
+        } else {
+          tab.savedMtimeMs = mtimeMs
+        }
+      } catch (err) {
+        console.error('[tabs] reload check failed:', tab.path, err)
       }
     },
 
@@ -94,13 +121,14 @@ export const useTabsStore = defineStore('tabs', {
       const tab: EditorTab = {
         id: `tab-${++tabSeq}`,
         path: null,
-        fileName: `未命名-${tabSeq}.md`,
+        fileName: `${t('tabs.untitled')}-${tabSeq}.md`,
         markdown: '',
         dirty: true,
         mode: settings.defaultMode,
         savedMtimeMs: 0,
         deleted: false,
-        reloadToken: 0
+        reloadToken: 0,
+        loading: false
       }
       this.tabs.push(tab)
       this.activeTabId = tab.id
@@ -126,9 +154,10 @@ export const useTabsStore = defineStore('tabs', {
       }
     },
 
-    async saveTab(id: string): Promise<'saved' | 'need-path' | 'error'> {
+    async saveTab(id: string): Promise<'saved' | 'need-path' | 'error' | 'loading'> {
       const tab = this.tabs.find((t) => t.id === id)
       if (!tab) return 'error'
+      if (tab.loading) return 'loading'
       if (!tab.path || tab.deleted) {
         return 'need-path'
       }
@@ -149,9 +178,10 @@ export const useTabsStore = defineStore('tabs', {
       }
     },
 
-    async saveTabAs(id: string, targetPath: string): Promise<'saved' | 'error'> {
+    async saveTabAs(id: string, targetPath: string): Promise<'saved' | 'error' | 'loading'> {
       const tab = this.tabs.find((t) => t.id === id)
       if (!tab) return 'error'
+      if (tab.loading) return 'loading'
       const snapshot = tab.markdown
       try {
         this.saving = true
@@ -210,6 +240,7 @@ export const useTabsStore = defineStore('tabs', {
     handleExternalContent(path: string, content: string, mtimeMs: number): 'reloaded' | 'clean' | 'conflict' | 'none' {
       const tab = this.byPath(path)
       if (!tab) return 'none'
+      if (tab.loading) return 'none'
       if (!tab.dirty) {
         if (content !== tab.markdown) {
           tab.markdown = content

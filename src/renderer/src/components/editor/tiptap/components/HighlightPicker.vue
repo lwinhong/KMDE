@@ -1,5 +1,5 @@
 <template>
-  <ToolbarButton :is-active="editor?.isActive('highlight')" title="高亮"
+  <ToolbarButton :is-active="editor?.isActive('highlight')" :title="$t('editor.highlight')"
     @click="editor?.chain().focus().toggleHighlight().run()">
     <HighlighterIcon :size="size" />
   </ToolbarButton>

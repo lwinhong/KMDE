@@ -143,17 +143,17 @@ defineExpose({ open, close })
     <div v-if="visible" class="palette-backdrop" @mousedown.self="close">
       <div class="palette-panel">
         <div class="palette-input-wrap">
-          <span class="palette-mode-tag">{{ mode === 'files' ? '文件' : '命令' }}</span>
+          <span class="palette-mode-tag">{{ mode === 'files' ? $t('palette.modeFiles') : $t('palette.modeCommands') }}</span>
           <input
             ref="inputRef"
             v-model="query"
             class="palette-input"
             type="text"
-            :placeholder="mode === 'files' ? '输入文件名快速打开…' : '输入命令名称…'"
+            :placeholder="mode === 'files' ? $t('palette.filesPlaceholder') : $t('palette.commandsPlaceholder')"
             spellcheck="false"
             @keydown="onKeydown"
           />
-          <span class="palette-esc">ESC 关闭</span>
+          <span class="palette-esc">{{ $t('palette.escToClose') }}</span>
         </div>
         <div class="palette-list">
           <template v-if="results.length > 0">
@@ -172,12 +172,12 @@ defineExpose({ open, close })
             </div>
           </template>
           <div v-else class="palette-empty">
-            {{ mode === 'files' ? (workspace.isOpen ? '没有匹配的文件' : '尚未打开工作区文件夹') : '没有匹配的命令' }}
+            {{ mode === 'files' ? (workspace.isOpen ? $t('palette.noFiles') : $t('palette.noWorkspace')) : $t('palette.noCommands') }}
           </div>
         </div>
         <div class="palette-footer">
-          <span>↑↓ 选择</span>
-          <span>↵ 确认</span>
+          <span>{{ $t('palette.footerSelect') }}</span>
+          <span>{{ $t('palette.footerConfirm') }}</span>
         </div>
       </div>
     </div>

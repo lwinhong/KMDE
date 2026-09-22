@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { onMounted, onBeforeUnmount, ref } from 'vue'
+import { computed, onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import { useMessage } from 'naive-ui'
+import { useI18n } from 'vue-i18n'
 import { useSettingsStore } from '../../stores/settings.store'
 import { useTabsStore } from '../../stores/tabs.store'
 import { useWorkspaceStore } from '../../stores/workspace.store'
 import type { MenuCommand, FsEvent, OutlineItem } from '@shared/types'
+import type { EditorTab } from '../../stores/tabs.store'
 import TabBar from './TabBar.vue'
 import TitleBar from './TitleBar.vue'
 import StatusBar from './StatusBar.vue'
@@ -15,33 +17,46 @@ import EditorArea from '../editor/EditorArea.vue'
 import CommandPalette, { type PaletteCommand } from '../palette/CommandPalette.vue'
 import ConflictDialog from '../conflict/ConflictDialog.vue'
 import ExportDialog from '../export/ExportDialog.vue'
+import AboutDialog from './AboutDialog.vue'
 
 const settings = useSettingsStore()
 const tabs = useTabsStore()
 const workspace = useWorkspaceStore()
 const message = useMessage()
+const { t } = useI18n()
 
 const editorAreaRef = ref<InstanceType<typeof EditorArea> | null>(null)
 const paletteRef = ref<InstanceType<typeof CommandPalette> | null>(null)
 const exportRef = ref<InstanceType<typeof ExportDialog> | null>(null)
+const aboutRef = ref<InstanceType<typeof AboutDialog> | null>(null)
 
 const outlineItems = ref<OutlineItem[]>([])
 const outlineActiveId = ref<string | null>(null)
 
-const paletteCommands: PaletteCommand[] = [
-  { id: 'new-file', title: '新建文件', shortcut: 'Ctrl+N' },
-  { id: 'open-file', title: '打开文件…', shortcut: 'Ctrl+O' },
-  { id: 'open-folder', title: '打开文件夹…', shortcut: 'Ctrl+K Ctrl+O' },
-  { id: 'save', title: '保存', shortcut: 'Ctrl+S' },
-  { id: 'save-as', title: '另存为…', shortcut: 'Ctrl+Shift+S' },
-  { id: 'export', title: '导出 HTML / PDF…', shortcut: 'Ctrl+Shift+E' },
-  { id: 'toggle-mode', title: '切换 源码 / 所见即所得 模式', shortcut: 'Ctrl+/' },
-  { id: 'toggle-sidebar', title: '显示 / 隐藏 侧边栏', shortcut: 'Ctrl+\\' },
-  { id: 'toggle-outline', title: '显示 / 隐藏 大纲面板', shortcut: 'Ctrl+Shift+U' },
-  { id: 'toggle-theme', title: '切换 明亮 / 暗黑 主题', shortcut: 'F11' },
-  { id: 'quick-open', title: '快速打开文件…', shortcut: 'Ctrl+P' },
-  { id: 'close-tab', title: '关闭当前标签页', shortcut: 'Ctrl+W' }
-]
+watch(
+  () => tabs.activeTabId,
+  () => {
+    outlineItems.value = []
+    outlineActiveId.value = null
+  }
+)
+
+const paletteCommands = computed<PaletteCommand[]>(() => [
+  { id: 'new-file', title: t('palette.newFile'), shortcut: 'Ctrl+N' },
+  { id: 'open-file', title: t('palette.openFile'), shortcut: 'Ctrl+O' },
+  { id: 'open-folder', title: t('palette.openFolder'), shortcut: 'Ctrl+K Ctrl+O' },
+  { id: 'save', title: t('palette.save'), shortcut: 'Ctrl+S' },
+  { id: 'save-as', title: t('palette.saveAs'), shortcut: 'Ctrl+Shift+S' },
+  { id: 'export', title: t('palette.export'), shortcut: 'Ctrl+Shift+E' },
+  { id: 'toggle-mode', title: t('palette.toggleMode'), shortcut: 'Ctrl+/' },
+  { id: 'toggle-sidebar', title: t('palette.toggleSidebar'), shortcut: 'Ctrl+\\' },
+  { id: 'toggle-outline', title: t('palette.toggleOutline'), shortcut: 'Ctrl+Shift+U' },
+  { id: 'toggle-theme', title: t('palette.toggleTheme'), shortcut: 'F11' },
+  { id: 'quick-open', title: t('palette.quickOpen'), shortcut: 'Ctrl+P' },
+  { id: 'close-tab', title: t('palette.closeTab'), shortcut: 'Ctrl+W' },
+  { id: 'set-language:zh-CN', title: t('palette.switchToZh') },
+  { id: 'set-language:en-US', title: t('palette.switchToEn') }
+])
 
 function runPaletteCommand(id: string): void {
   void runCommand(id as MenuCommand)
@@ -53,7 +68,7 @@ async function openFileByPath(path: string): Promise<void> {
   try {
     await tabs.openPath(path)
   } catch (err) {
-    message.error(`打开文件失败: ${err instanceof Error ? err.message : String(err)}`)
+    message.error(t('notify.openFileFailed', { msg: err instanceof Error ? err.message : String(err) }))
   }
 }
 
@@ -70,7 +85,7 @@ async function openFolderPicker(): Promise<void> {
     try {
       await workspace.openFolder(path)
     } catch (err) {
-      message.error(`打开文件夹失败: ${err instanceof Error ? err.message : String(err)}`)
+      message.error(t('notify.openFolderFailed', { msg: err instanceof Error ? err.message : String(err) }))
     }
   }
 }
@@ -80,7 +95,7 @@ async function openLastWorkspace(): Promise<void> {
     try {
       await workspace.openFolder(settings.lastWorkspace)
     } catch {
-      message.error('无法恢复上次的工作区')
+      message.error(t('notify.restoreWorkspaceFailed'))
     }
   }
 }
@@ -92,6 +107,13 @@ async function newFile(): Promise<void> {
 // ---------------- command dispatch ----------------
 
 async function runCommand(command: MenuCommand): Promise<void> {
+  if (command.startsWith('set-language:')) {
+    const locale = command.slice('set-language:'.length)
+    if (locale === 'zh-CN' || locale === 'en-US') {
+      settings.setLanguage(locale)
+    }
+    return
+  }
   switch (command) {
     case 'new-file':
       await newFile()
@@ -109,9 +131,9 @@ async function runCommand(command: MenuCommand): Promise<void> {
       if (result === 'need-path') {
         await runCommand('save-as')
       } else if (result === 'error') {
-        message.error('保存失败')
-      } else {
-        message.success('已保存')
+        message.error(t('notify.saveFailed'))
+      } else if (result === 'saved') {
+        message.success(t('notify.saved'))
       }
       break
     }
@@ -122,9 +144,9 @@ async function runCommand(command: MenuCommand): Promise<void> {
       if (target) {
         const result = await tabs.saveTabAs(tab.id, target)
         if (result === 'saved') {
-          message.success('已保存')
-        } else {
-          message.error('保存失败')
+          message.success(t('notify.saved'))
+        } else if (result === 'error') {
+          message.error(t('notify.saveFailed'))
         }
       }
       break
@@ -132,11 +154,15 @@ async function runCommand(command: MenuCommand): Promise<void> {
     case 'export': {
       const tab = tabs.activeTab
       if (!tab) {
-        message.warning('请先打开一个文件')
+        message.warning(t('notify.openFileFirst'))
         break
       }
       if (!tab.path) {
-        message.warning('请先保存文件后再导出')
+        message.warning(t('notify.saveBeforeExport'))
+        break
+      }
+      if (tab.loading) {
+        message.warning(t('notify.fileLoading'))
         break
       }
       exportRef.value?.open(tab)
@@ -144,7 +170,7 @@ async function runCommand(command: MenuCommand): Promise<void> {
     }
     case 'toggle-mode': {
       const tab = tabs.activeTab
-      if (!tab) break
+      if (!tab || tab.loading) break
       editorAreaRef.value?.flushActive()
       tabs.toggleMode(tab.id)
       break
@@ -171,7 +197,7 @@ async function runCommand(command: MenuCommand): Promise<void> {
       break
     }
     case 'show-settings-info':
-      message.info(`KMDE v0.1.0 — Electron + Vue 3 + Tiptap + CodeMirror 6`)
+      aboutRef.value?.open()
       break
   }
 }
@@ -179,9 +205,9 @@ async function runCommand(command: MenuCommand): Promise<void> {
 async function closeTab(id: string): Promise<void> {
   const tab = tabs.tabs.find((t) => t.id === id)
   if (!tab) return
-  if (tab.dirty) {
+  if (tab.dirty && !isPristineUntitled(tab)) {
     // naive-ui dialog via window.confirm would be ugly; use a lightweight confirm
-    const ok = window.confirm(`「${tab.fileName}」有未保存的修改，是否保存并关闭？`)
+    const ok = window.confirm(t('notify.unsavedCloseConfirm', { name: tab.fileName }))
     if (ok) {
       const saved = await tabs.flushSave(id)
       if (!saved) return
@@ -190,10 +216,14 @@ async function closeTab(id: string): Promise<void> {
   tabs.removeTab(id)
 }
 
+function isPristineUntitled(tab: EditorTab): boolean {
+  return tab.path === null && tab.markdown === '' && !tab.deleted
+}
+
 async function requestCloseApp(): Promise<void> {
   for (const tab of [...tabs.tabs]) {
-    if (tab.dirty || tab.deleted) {
-      const ok = window.confirm(`「${tab.fileName}」有未保存的修改，是否保存并关闭？`)
+    if ((tab.dirty || tab.deleted) && !isPristineUntitled(tab)) {
+      const ok = window.confirm(t('notify.unsavedCloseConfirm', { name: tab.fileName }))
       if (ok) {
         const saved = await tabs.flushSave(tab.id)
         if (!saved) return
@@ -225,7 +255,7 @@ async function handleFsEvent(ev: FsEvent): Promise<void> {
         const { content, mtimeMs } = await window.kmde.readFile(ev.path)
         const result = tabs.handleExternalContent(ev.path, content, mtimeMs)
         if (result === 'reloaded' && tabs.activeTabId === tab.id) {
-          message.info(`「${tab.fileName}」已在磁盘上被修改，已重新加载`)
+          message.info(t('notify.fileReloaded', { name: tab.fileName }))
         }
       } catch {
         // file may be mid-write; ignore
@@ -294,7 +324,13 @@ function handleOutlineJump(item: OutlineItem): void {
 <template>
   <div class="workbench" @dragover.prevent @drop.prevent="handleDrop">
     <TitleBar @command="runCommand" @request-close="requestCloseApp" />
-    <TabBar @open-file="openFilePicker" @open-folder="openFolderPicker" @new-file="newFile()" @close-tab="closeTab" />
+    <TabBar
+      v-if="tabs.activeTab"
+      @open-file="openFilePicker"
+      @open-folder="openFolderPicker"
+      @new-file="newFile()"
+      @close-tab="closeTab"
+    />
     <div class="workbench-main">
       <FileTree v-if="settings.sidebarVisible" @open-file="openFileByPath" />
       <EditorArea
@@ -322,6 +358,7 @@ function handleOutlineJump(item: OutlineItem): void {
     <CommandPalette ref="paletteRef" :commands="paletteCommands" @run-command="runPaletteCommand" @open-file="openFileByPath" />
     <ConflictDialog />
     <ExportDialog ref="exportRef" />
+    <AboutDialog ref="aboutRef" />
   </div>
 </template>
 

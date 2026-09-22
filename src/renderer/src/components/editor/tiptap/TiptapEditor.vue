@@ -241,7 +241,7 @@ onBeforeUnmount(() => {
   editor.value?.destroy()
 })
 
-defineExpose({ flush, jumpTo })
+defineExpose({ flush, jumpTo, emitOutline })
 </script>
 
 <template>
@@ -265,24 +265,24 @@ defineExpose({ flush, jumpTo })
       </BubbleMenu>
       <Teleport to="body">
         <div v-if="tableToolbarVisible && editor" class="notion-table-toolbar" :style="tableToolbarStyle">
-          <button class="ntb-btn" title="在左边插入列" @click="editor.chain().focus().addColumnBefore().run()">
+          <button class="ntb-btn" :title="$t('editor.addColBefore')" @click="editor.chain().focus().addColumnBefore().run()">
             <AddColumnBeforeIcon :size="18" />
           </button>
-          <button class="ntb-btn" title="在右边插入列" @click="editor.chain().focus().addColumnAfter().run()">
+          <button class="ntb-btn" :title="$t('editor.addColAfter')" @click="editor.chain().focus().addColumnAfter().run()">
             <AddColumnAfterIcon :size="18" />
           </button>
           <div class="ntb-divider" />
-          <button class="ntb-btn" title="在上面插入行" @click="editor.chain().focus().addRowBefore().run()">
+          <button class="ntb-btn" :title="$t('editor.addRowAbove')" @click="editor.chain().focus().addRowBefore().run()">
             <AddRowBeforeIcon :size="18" />
           </button>
-          <button class="ntb-btn" title="在下面插入行" @click="editor.chain().focus().addRowAfter().run()">
+          <button class="ntb-btn" :title="$t('editor.addRowBelow')" @click="editor.chain().focus().addRowAfter().run()">
             <AddRowAfterIcon :size="18" />
           </button>
           <div class="ntb-divider" />
           <button
             class="ntb-btn"
             :disabled="!editor.can().deleteColumn()"
-            title="删除列"
+            :title="$t('editor.deleteColumn')"
             @click="editor.chain().focus().deleteColumn().run()"
           >
             <DeleteColumnIcon :size="18" />
@@ -290,7 +290,7 @@ defineExpose({ flush, jumpTo })
           <button
             class="ntb-btn"
             :disabled="!editor.can().deleteRow()"
-            title="删除行"
+            :title="$t('editor.deleteRow')"
             @click="editor.chain().focus().deleteRow().run()"
           >
             <DeleteRowIcon :size="18" />
@@ -298,7 +298,7 @@ defineExpose({ flush, jumpTo })
           <div class="ntb-divider" />
           <button
             class="ntb-btn ntb-danger"
-            title="删除表格"
+            :title="$t('editor.deleteTable')"
             @click="editor.chain().focus().deleteTable().run()"
           >
             <DeleteTableIcon :size="18" />

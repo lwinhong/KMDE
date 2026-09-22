@@ -2,6 +2,7 @@
 import { computed, onMounted, provide, reactive, ref, watch } from 'vue'
 import { NDropdown, NModal, NInput, NButton, useMessage } from 'naive-ui'
 import type { DropdownOption } from 'naive-ui'
+import { useI18n } from 'vue-i18n'
 import type { FileNode } from '@shared/types'
 import { useWorkspaceStore } from '../../stores/workspace.store'
 import { dirname, joinPath } from '../../stores/pathUtils'
@@ -13,6 +14,7 @@ const emit = defineEmits<{
 
 const workspace = useWorkspaceStore()
 const message = useMessage()
+const { t } = useI18n()
 
 const rootChildren = ref<FileNode[]>([])
 const expandedDirs = reactive(new Set<string>())
@@ -36,7 +38,7 @@ const controller: TreeController = {
         const nodes = await window.kmde.listDir(node.path)
         childrenCache.set(node.path, nodes)
       } catch (err) {
-        message.error(`读取目录失败: ${err instanceof Error ? err.message : String(err)}`)
+        message.error(t('sidebar.readDirFailed', { msg: err instanceof Error ? err.message : String(err) }))
         expandedDirs.delete(node.path)
       } finally {
         loadingDirs.delete(node.path)
@@ -73,7 +75,7 @@ async function openNode(node: FileNode): Promise<void> {
   if (workspace.isMdFile(node)) {
     emit('open-file', node.path)
   } else {
-    message.warning('仅支持打开 Markdown / 文本文件')
+    message.warning(t('sidebar.mdOnly'))
   }
 }
 
@@ -95,11 +97,11 @@ const ctxOptions = computed<DropdownOption[]>(() => {
   if (!node) return []
   const options: DropdownOption[] = []
   if (node.isDir) {
-    options.push({ label: '新建文件', key: 'new-file' })
-    options.push({ label: '新建文件夹', key: 'new-dir' })
+    options.push({ label: t('sidebar.newFile'), key: 'new-file' })
+    options.push({ label: t('sidebar.newFolder'), key: 'new-dir' })
   }
-  options.push({ label: '重命名', key: 'rename' })
-  options.push({ label: '删除（移入回收站）', key: 'remove' })
+  options.push({ label: t('common.rename'), key: 'rename' })
+  options.push({ label: t('sidebar.removeToTrash'), key: 'remove' })
   return options
 })
 
@@ -109,17 +111,17 @@ async function onCtxSelect(key: string | number): Promise<void> {
   if (!node) return
 
   if (key === 'new-file' || key === 'new-dir') {
-    openNameDialog(key === 'new-file' ? '新建文件' : '新建文件夹', '', key, node)
+    openNameDialog(key === 'new-file' ? t('sidebar.newFile') : t('sidebar.newFolder'), '', key, node)
   } else if (key === 'rename') {
-    openNameDialog('重命名', node.name, 'rename', node)
+    openNameDialog(t('common.rename'), node.name, 'rename', node)
   } else if (key === 'remove') {
-    const ok = window.confirm(`确定删除「${node.name}」吗？（将移入回收站）`)
+    const ok = window.confirm(t('sidebar.deleteConfirm', { name: node.name }))
     if (!ok) return
     try {
       await window.kmde.removeEntry(node.path)
       await refreshRoot()
     } catch (err) {
-      message.error(`删除失败: ${err instanceof Error ? err.message : String(err)}`)
+      message.error(t('sidebar.deleteFailed', { msg: err instanceof Error ? err.message : String(err) }))
     }
   }
 }
@@ -152,7 +154,7 @@ function openNameDialog(
 
 function newFileAtRoot(): void {
   if (!workspace.root) return
-  openNameDialog('新建文件', '', 'new-file', {
+  openNameDialog(t('sidebar.newFile'), '', 'new-file', {
     path: workspace.root,
     name: workspace.rootName,
     isDir: true,
@@ -166,7 +168,7 @@ async function confirmNameDialog(): Promise<void> {
   const name = value.trim()
   if (!name || !target) return
   if (/[\\/:*?"<>|]/.test(name)) {
-    message.error('名称包含非法字符 \\ / : * ? " < > |')
+    message.error(t('sidebar.illegalNameChars', { chars: '\\ / : * ? " < > |' }))
     return
   }
   nameDialog.busy = true
@@ -186,7 +188,7 @@ async function confirmNameDialog(): Promise<void> {
     }
     nameDialog.visible = false
   } catch (err) {
-    message.error(`操作失败: ${err instanceof Error ? err.message : String(err)}`)
+    message.error(t('sidebar.operationFailed', { msg: err instanceof Error ? err.message : String(err) }))
   } finally {
     nameDialog.busy = false
   }
@@ -216,14 +218,14 @@ onMounted(() => {
 <template>
   <aside class="filetree">
     <div class="filetree-header">
-      <span class="filetree-title" :title="workspace.root ?? ''">{{ workspace.rootName || '资源管理器' }}</span>
+      <span class="filetree-title" :title="workspace.root ?? ''">{{ workspace.rootName || $t('sidebar.explorer') }}</span>
       <span class="filetree-actions">
-        <button class="filetree-action" title="新建文件" @click="newFileAtRoot">
+        <button class="filetree-action" :title="$t('sidebar.newFile')" @click="newFileAtRoot">
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M12 5v14M5 12h14" />
           </svg>
         </button>
-        <button class="filetree-action" title="刷新" @click="refreshRoot">
+        <button class="filetree-action" :title="$t('sidebar.refresh')" @click="refreshRoot">
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6" />
           </svg>
@@ -240,9 +242,9 @@ onMounted(() => {
           @open="openNode"
           @contextmenu="onContextMenu"
         />
-        <div v-if="rootChildren.length === 0" class="filetree-empty">空文件夹</div>
+        <div v-if="rootChildren.length === 0" class="filetree-empty">{{ $t('sidebar.emptyFolder') }}</div>
       </template>
-      <div v-else class="filetree-empty">未打开工作区<br />点击右上角「打开文件夹」</div>
+      <div v-else class="filetree-empty">{{ $t('sidebar.noWorkspace') }}<br />{{ $t('sidebar.noWorkspaceHint') }}</div>
     </div>
 
     <n-dropdown
@@ -266,13 +268,13 @@ onMounted(() => {
       <n-input
         ref="nameInputRef"
         v-model:value="nameDialog.value"
-        placeholder="输入名称"
+        :placeholder="$t('sidebar.inputName')"
         @keydown.enter="confirmNameDialog"
       />
       <template #footer>
         <div class="name-dialog-footer">
-          <n-button size="small" @click="nameDialog.visible = false">取消</n-button>
-          <n-button size="small" type="primary" :loading="nameDialog.busy" @click="confirmNameDialog">确定</n-button>
+          <n-button size="small" @click="nameDialog.visible = false">{{ $t('common.cancel') }}</n-button>
+          <n-button size="small" type="primary" :loading="nameDialog.busy" @click="confirmNameDialog">{{ $t('common.ok') }}</n-button>
         </div>
       </template>
     </n-modal>

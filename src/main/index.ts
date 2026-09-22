@@ -3,6 +3,9 @@ import { join } from 'path'
 import { existsSync, statSync } from 'fs'
 import { registerIpcHandlers, sendToRenderer } from './ipc'
 import { createAppMenu } from './menu'
+import { readSettings, setCurrentLocale } from './settings'
+import { APP_LOCALES } from '../shared/types'
+import type { AppLocale } from '../shared/types'
 
 const MD_EXTENSIONS = ['.md', '.markdown', '.mdown']
 
@@ -129,10 +132,21 @@ if (!gotSingleInstanceLock) {
     }
   ])
 
-  void app.whenReady().then(() => {
+  void app.whenReady().then(async () => {
     registerIpcHandlers()
+    const settings = await readSettings()
+    setCurrentLocale(settings.language)
     createAppMenu()
     createWindow()
+
+    ipcMain.handle('app:set-locale', (_e, locale: unknown): boolean => {
+      if (typeof locale === 'string' && (APP_LOCALES as string[]).includes(locale)) {
+        setCurrentLocale(locale as AppLocale)
+        createAppMenu()
+        return true
+      }
+      return false
+    })
 
     // ---- custom title bar window controls ----
     ipcMain.on('window:minimize', (event) => {

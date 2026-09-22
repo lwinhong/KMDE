@@ -28,16 +28,16 @@ function resolve(action: 'load-disk' | 'keep'): void {
     transform-origin="center"
   >
     <div class="conflict-dialog">
-      <div class="conflict-title">文件已在磁盘上被修改</div>
+      <div class="conflict-title">{{ $t('conflict.title') }}</div>
       <div class="conflict-file">{{ fileName }}</div>
       <div class="conflict-desc">
-        此文件在编辑器中有未保存的修改，同时磁盘上的版本也发生了变化。请选择要保留的版本。
+        {{ $t('conflict.desc') }}
       </div>
-      <div class="conflict-section-label">磁盘上的内容（预览）</div>
+      <div class="conflict-section-label">{{ $t('conflict.diskLabel') }}</div>
       <pre class="conflict-preview">{{ diskPreview }}</pre>
       <div class="conflict-actions">
-        <NButton size="small" quaternary @click="resolve('keep')">保留我的修改</NButton>
-        <NButton size="small" type="primary" @click="resolve('load-disk')">加载磁盘版本</NButton>
+        <NButton size="small" quaternary @click="resolve('keep')">{{ $t('conflict.keepMine') }}</NButton>
+        <NButton size="small" type="primary" @click="resolve('load-disk')">{{ $t('conflict.loadDisk') }}</NButton>
       </div>
     </div>
   </NModal>

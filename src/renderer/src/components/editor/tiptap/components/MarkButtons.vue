@@ -1,6 +1,6 @@
 <template>
   <ToolbarGroup>
-    <ToolbarButton v-for="mark in marks" :key="mark.type" :is-active="editor?.isActive(mark.type)" :title="mark.title"
+    <ToolbarButton v-for="mark in marks" :key="mark.type" :is-active="editor?.isActive(mark.type)" :title="$t(mark.titleKey)"
       @click="editor?.chain().focus()[mark.command]().run()">
       <component :is="mark.icon" :size="size" />
     </ToolbarButton>
@@ -19,10 +19,9 @@ defineProps({
 })
 
 const marks = [
-  { type: 'bold', icon: BoldIcon, title: '加粗 (Ctrl+B)', command: 'toggleBold' },
-  { type: 'italic', icon: ItalicIcon, title: '斜体 (Ctrl+I)', command: 'toggleItalic' },
-  { type: 'strike', icon: StrikeIcon, title: '删除线', command: 'toggleStrike' },
-  { type: 'underline', icon: UnderlineIcon, title: '下划线 (Ctrl+U)', command: 'toggleUnderline' },
-  // { type: 'code', icon: CodeIcon, title: '行内代码', command: 'toggleCode' },
+  { type: 'bold', icon: BoldIcon, titleKey: 'editor.bold', command: 'toggleBold' },
+  { type: 'italic', icon: ItalicIcon, titleKey: 'editor.italic', command: 'toggleItalic' },
+  { type: 'strike', icon: StrikeIcon, titleKey: 'editor.strike', command: 'toggleStrike' },
+  { type: 'underline', icon: UnderlineIcon, titleKey: 'editor.underline', command: 'toggleUnderline' },
 ]
 </script>

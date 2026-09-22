@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { NModal, NButton, NRadioGroup, NRadioButton, NInput, useMessage } from 'naive-ui'
 import type { EditorTab } from '@/stores/tabs.store'
 import { buildExportHtml, defaultExportPath } from '@/export/htmlExport'
+import { t } from '@/i18n'
 
 const message = useMessage()
 
@@ -53,10 +54,10 @@ async function confirm(): Promise<void> {
       await window.kmde.exportPdf(html, out)
     }
     show.value = false
-    message.success(`已导出到 ${out}`)
+    message.success(t('export.exportedTo', { path: out }))
   } catch (err) {
     console.error('[export] failed:', err)
-    message.error(`导出失败：${err instanceof Error ? err.message : String(err)}`)
+    message.error(t('export.failed', { msg: err instanceof Error ? err.message : String(err) }))
   } finally {
     exporting.value = false
   }
@@ -68,11 +69,11 @@ defineExpose({ open })
 <template>
   <NModal :show="show" :mask-closable="!exporting" transform-origin="center" @update:show="show = $event">
     <div class="export-dialog">
-      <div class="export-title">导出文档</div>
+      <div class="export-title">{{ $t('export.title') }}</div>
       <div class="export-file">{{ tab?.fileName }}</div>
 
       <div class="export-field">
-        <label class="export-label">格式</label>
+        <label class="export-label">{{ $t('export.format') }}</label>
         <NRadioGroup :value="format" size="small" @update:value="onFormatChange">
           <NRadioButton value="html">HTML</NRadioButton>
           <NRadioButton value="pdf">PDF</NRadioButton>
@@ -80,21 +81,21 @@ defineExpose({ open })
       </div>
 
       <div class="export-field">
-        <label class="export-label">输出路径</label>
+        <label class="export-label">{{ $t('export.outputPath') }}</label>
         <div class="export-path-row">
-          <NInput v-model:value="outputPath" size="small" :disabled="exporting" placeholder="选择输出位置" />
-          <NButton size="small" quaternary :disabled="exporting" @click="browse">浏览…</NButton>
+          <NInput v-model:value="outputPath" size="small" :disabled="exporting" :placeholder="$t('export.chooseOutput')" />
+          <NButton size="small" quaternary :disabled="exporting" @click="browse">{{ $t('export.browse') }}</NButton>
         </div>
       </div>
 
       <div class="export-hint">
-        {{ format === 'pdf' ? 'PDF 导出会等待 Mermaid 图表与代码高亮渲染完成。' : 'HTML 为自包含样式，图片保留相对路径引用。' }}
+        {{ format === 'pdf' ? $t('export.pdfHint') : $t('export.htmlHint') }}
       </div>
 
       <div class="export-actions">
-        <NButton size="small" quaternary :disabled="exporting" @click="show = false">取消</NButton>
+        <NButton size="small" quaternary :disabled="exporting" @click="show = false">{{ $t('common.cancel') }}</NButton>
         <NButton size="small" type="primary" :loading="exporting" :disabled="!canConfirm" @click="confirm">
-          导出
+          {{ $t('export.confirm') }}
         </NButton>
       </div>
     </div>

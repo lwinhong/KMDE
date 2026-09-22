@@ -15,7 +15,7 @@
     <TableMenu :editor="editor" />
     <template v-if="useSourceMode">
       <ToolbarSeparator />
-      <ToolbarButton class="md-toggle-btn" :title="sourceMode ? '返回编辑器' : '查看 Markdown 源码'"
+      <ToolbarButton class="md-toggle-btn" :title="sourceMode ? $t('editor.backToEditor') : $t('editor.viewSource')"
         :class="{ 'is-active': sourceMode }" @click="$emit('toggle-source')">
         <MarkdownIcon :size="18" />
       </ToolbarButton>

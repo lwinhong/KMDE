@@ -2,14 +2,14 @@
   <ToolbarGroup>
     <ToolbarButton
       :disabled="!editor?.can().undo()"
-      title="撤销 (Ctrl+Z)"
+      :title="$t('editor.undo')"
       @click="editor?.chain().focus().undo().run()"
     >
       <UndoIcon />
     </ToolbarButton>
     <ToolbarButton
       :disabled="!editor?.can().redo()"
-      title="重做 (Ctrl+Y)"
+      :title="$t('editor.redo')"
       @click="editor?.chain().focus().redo().run()"
     >
       <RedoIcon />

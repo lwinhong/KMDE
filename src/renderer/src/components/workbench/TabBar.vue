@@ -46,28 +46,28 @@ function onAuxClick(e: MouseEvent, id: string): void {
         <span class="tabbar-tab-icon"><MarkdownIcon :size="13" /></span>
         <span class="tabbar-tab-label">
           {{ tab.fileName }}
-          <span v-if="tab.deleted" class="tabbar-tab-deleted">(已删除)</span>
+          <span v-if="tab.deleted" class="tabbar-tab-deleted">{{ $t('tabbar.deleted') }}</span>
         </span>
         <span class="tabbar-tab-dot" :class="{ 'is-dirty': tab.dirty }" />
-        <button class="tabbar-tab-close" title="关闭" @click="onTabClose($event, tab.id)">
-          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5">
+        <button class="tabbar-tab-close" :title="$t('common.close')" @click="onTabClose($event, tab.id)">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5">
             <path d="M18 6 6 18M6 6l12 12" />
           </svg>
         </button>
       </div>
     </div>
     <div class="tabbar-actions">
-      <button class="tabbar-action-btn" title="新建文件 (Ctrl+N)" @click="emit('new-file')">
+      <button class="tabbar-action-btn" :title="$t('tabbar.newFile')" @click="emit('new-file')">
         <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M12 5v14M5 12h14" />
         </svg>
       </button>
-      <button class="tabbar-action-btn" title="打开文件 (Ctrl+O)" @click="emit('open-file')">
+      <button class="tabbar-action-btn" :title="$t('tabbar.openFile')" @click="emit('open-file')">
         <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M3 7c0-1.1.9-2 2-2h4l2 2h8c1.1 0 2 .9 2 2v8c0 1.1-.9 2-2 2H5c-1.1 0-2-.9-2-2V7z" />
         </svg>
       </button>
-      <button class="tabbar-action-btn" title="打开文件夹 (Ctrl+Shift+O)" @click="emit('open-folder')">
+      <button class="tabbar-action-btn" :title="$t('tabbar.openFolder')" @click="emit('open-folder')">
         <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v1H3V7z" />
           <path d="M3 10h18l-2 9a2 2 0 0 1-2 1.6H7a2 2 0 0 1-2-1.6L3 10z" />

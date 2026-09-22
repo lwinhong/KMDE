@@ -134,7 +134,7 @@ async function handleCopy(): Promise<void> {
     <div class="kme-codeblock-bar" contenteditable="false">
       <select class="kme-codeblock-lang" :value="language" @change="language = ($event.target as HTMLSelectElement).value">
         <option v-for="lang in LANGUAGES" :key="lang" :value="lang">
-          {{ lang === '' ? '纯文本' : lang }}
+          {{ lang === '' ? $t('editor.plaintext') : lang }}
         </option>
       </select>
       <span class="kme-codeblock-spacer" />
@@ -142,22 +142,22 @@ async function handleCopy(): Promise<void> {
         <button
           class="kme-codeblock-btn"
           :class="{ 'is-active': previewMode }"
-          title="预览图表"
+          :title="$t('editor.previewDiagram')"
           @click="previewMode = true"
         >
-          图表
+          {{ $t('editor.diagram') }}
         </button>
         <button
           class="kme-codeblock-btn"
           :class="{ 'is-active': !previewMode }"
-          title="编辑源码"
+          :title="$t('editor.editSource')"
           @click="previewMode = false"
         >
-          源码
+          {{ $t('editor.source') }}
         </button>
       </template>
-      <button class="kme-codeblock-btn" title="复制" @click="handleCopy">
-        {{ copied ? '已复制' : '复制' }}
+      <button class="kme-codeblock-btn" :title="$t('editor.copy')" @click="handleCopy">
+        {{ copied ? $t('editor.copied') : $t('editor.copy') }}
       </button>
     </div>
     <div
@@ -169,11 +169,11 @@ async function handleCopy(): Promise<void> {
     >
       <div v-if="svg" class="kme-mermaid-svg" v-html="svg"></div>
       <div v-if="mermaidError" class="kme-mermaid-error">
-        <div class="kme-mermaid-error-title">Mermaid 渲染失败</div>
+        <div class="kme-mermaid-error-title">{{ $t('editor.mermaidRenderFailed') }}</div>
         <pre class="kme-mermaid-error-detail">{{ mermaidError }}</pre>
-        <button class="kme-codeblock-btn" @click="previewMode = false">查看源码</button>
+        <button class="kme-codeblock-btn" @click="previewMode = false">{{ $t('editor.viewSourceCode') }}</button>
       </div>
-      <div v-if="!svg && !mermaidError" class="kme-mermaid-placeholder">（空图表，双击此处编辑源码）</div>
+      <div v-if="!svg && !mermaidError" class="kme-mermaid-placeholder">{{ $t('editor.emptyDiagram') }}</div>
     </div>
     <pre v-show="!(isMermaid && previewMode)" class="kme-codeblock-pre"><code><node-view-content /></code></pre>
   </node-view-wrapper>

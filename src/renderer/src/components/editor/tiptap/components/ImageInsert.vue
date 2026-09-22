@@ -1,7 +1,7 @@
 <template>
   <ToolbarDropdown align-right>
     <template #trigger="{ toggle }">
-      <ToolbarButton title="插入图片" @click="toggle">
+      <ToolbarButton :title="$t('editor.insertImage')" @click="toggle">
         <ImagePlusIcon />
       </ToolbarButton>
     </template>
@@ -9,11 +9,11 @@
       <div class="image-popover" @click.stop>
         <div class="image-form">
           <div class="image-form-row">
-            <label class="image-form-label">标题</label>
+            <label class="image-form-label">{{ $t('editor.titleLabel') }}</label>
             <input
               v-model="imageTitle"
               type="text"
-              placeholder="图片标题（可选）"
+              :placeholder="$t('editor.imageTitlePlaceholder')"
               class="image-form-input"
             />
           </div>
@@ -22,18 +22,18 @@
             <input
               v-model="imageUrl"
               type="url"
-              placeholder="输入图片地址..."
+              :placeholder="$t('editor.imageUrlPlaceholder')"
               class="image-form-input"
               @keydown.enter.prevent="doConfirm(close)"
             />
           </div>
           <template v-if="uploadFn">
             <div class="image-form-divider">
-              <span class="image-form-divider-text">或</span>
+              <span class="image-form-divider-text">{{ $t('editor.or') }}</span>
             </div>
             <div class="image-form-row">
               <button class="image-form-upload-btn" :disabled="uploading" @click="triggerFileInput">
-                {{ uploading ? '处理中...' : '选择本地图片插入' }}
+                {{ uploading ? $t('editor.processing') : $t('editor.chooseLocalImage') }}
               </button>
               <input
                 ref="fileInputRef"
@@ -45,8 +45,8 @@
             </div>
           </template>
           <div class="image-form-actions">
-            <button class="image-form-btn" @click="close">取消</button>
-            <button class="image-form-btn confirm" :disabled="!imageUrl.trim()" @click="doConfirm(close)">确定</button>
+            <button class="image-form-btn" @click="close">{{ $t('common.cancel') }}</button>
+            <button class="image-form-btn confirm" :disabled="!imageUrl.trim()" @click="doConfirm(close)">{{ $t('common.ok') }}</button>
           </div>
         </div>
       </div>
