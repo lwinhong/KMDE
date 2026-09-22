@@ -22,6 +22,7 @@ function open(target: EditorTab): void {
 }
 
 function onFormatChange(value: 'html' | 'pdf'): void {
+  format.value = value
   if (tab.value) {
     outputPath.value = defaultExportPath(tab.value.path, tab.value.fileName, value)
   }
