@@ -12,6 +12,7 @@ export default defineConfig({
   },
   renderer: {
     resolve: {
+      dedupe: ['vue', 'pinia'],
       alias: {
         '@': resolve('src/renderer/src'),
         '@shared': resolve('src/shared')

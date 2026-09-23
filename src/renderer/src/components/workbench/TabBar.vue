@@ -270,15 +270,15 @@ function onAuxClick(e: MouseEvent, id: string): void {
   margin: 5px 3px;
   border: none;
   border-radius: var(--kme-radius-md);
-  background: transparent;
+  background: var(--kme-tabbar-bg);
   color: var(--kme-text-2);
   cursor: pointer;
   flex-shrink: 0;
-  transition: background 0.15s, color 0.15s;
+  transition: box-shadow 0.15s, color 0.15s;
 }
 
 .tabbar-new-btn:hover {
-  background: var(--kme-bg-hover);
+  box-shadow: inset 0 0 0 999px var(--kme-bg-active);
   color: var(--kme-text-1);
 }
 
@@ -295,7 +295,7 @@ function onAuxClick(e: MouseEvent, id: string): void {
   cursor: pointer;
   flex-shrink: 0;
   z-index: 2;
-  transition: background 0.15s, color 0.15s;
+  transition: box-shadow 0.15s, color 0.15s;
 }
 
 .tabbar-arrow-left {
@@ -303,8 +303,19 @@ function onAuxClick(e: MouseEvent, id: string): void {
   left: 0;
 }
 
+.tabbar-arrow-left::after {
+  content: '';
+  position: absolute;
+  left: 100%;
+  top: 0;
+  bottom: 0;
+  width: 12px;
+  background: linear-gradient(to right, var(--kme-tabbar-bg), transparent);
+  pointer-events: none;
+}
+
 .tabbar-arrow:hover {
-  background: var(--kme-bg-hover);
+  box-shadow: inset 0 0 0 999px var(--kme-bg-active);
   color: var(--kme-text-1);
 }
 

@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { computed, ref, watch, nextTick, onBeforeUnmount } from 'vue'
-import { useMessage } from 'naive-ui'
+import { watch, nextTick, onBeforeUnmount } from 'vue'
 import type { OutlineItem } from '@shared/types'
-import { useTabsStore } from '../../stores/tabs.store'
-import { t } from '@/i18n'
+import { useTabsStore, type EditorTab } from '../../stores/tabs.store'
 import TiptapEditor from './tiptap/TiptapEditor.vue'
 import SourceEditor from './source/SourceEditor.vue'
+
+defineProps<{ locked: boolean }>()
 
 const emit = defineEmits<{
   (e: 'outline-change', items: OutlineItem[], activeId: string | null): void
@@ -13,9 +13,6 @@ const emit = defineEmits<{
 }>()
 
 const tabs = useTabsStore()
-const message = useMessage()
-
-const activeTab = computed(() => tabs.activeTab)
 
 interface EditorInstance {
   flush: () => string
@@ -34,39 +31,6 @@ function setEditorRef(tabId: string, el: unknown): void {
   }
 }
 
-const AUTOSAVE_DELAY = 800
-let autosaveTimer: ReturnType<typeof setTimeout> | null = null
-
-function cancelAutosave(): void {
-  if (autosaveTimer) {
-    clearTimeout(autosaveTimer)
-    autosaveTimer = null
-  }
-}
-
-watch(
-  () => {
-    const tab = tabs.activeTab
-    return tab ? `${tab.id}:${tab.dirty}` : ''
-  },
-  (value) => {
-    cancelAutosave()
-    if (!value.endsWith(':true')) return
-    const tab = tabs.activeTab
-    if (!tab || !tab.path || tab.deleted) {
-      // untitled/deleted tabs need an explicit save-as, never autosave
-      return
-    }
-    const id = tab.id
-    autosaveTimer = setTimeout(async () => {
-      const result = await tabs.saveTab(id)
-      if (result === 'error') {
-        message.error(t('editor.autosaveFailed'))
-      }
-    }, AUTOSAVE_DELAY)
-  }
-)
-
 // switching between already-open tabs reuses resident editor instances,
 // so the newly activated editor must re-publish its outline once visible
 watch(
@@ -80,14 +44,22 @@ watch(
 )
 
 onBeforeUnmount(() => {
-  cancelAutosave()
+  flushAll()
   editorInstances.clear()
 })
 
 function flushActive(): string | null {
   const tab = tabs.activeTab
   if (!tab) return null
-  return editorInstances.get(tab.id)?.flush() ?? null
+  return flushTab(tab.id)
+}
+
+function flushTab(id: string): string | null {
+  return editorInstances.get(id)?.flush() ?? null
+}
+
+function flushAll(): void {
+  for (const instance of editorInstances.values()) instance.flush()
 }
 
 function jumpTo(item: OutlineItem): void {
@@ -113,7 +85,7 @@ function onToggleMode(): void {
   tabs.toggleMode(tab.id)
 }
 
-defineExpose({ flushActive, jumpTo })
+defineExpose({ flushActive, flushTab, flushAll, jumpTo })
 </script>
 
 <template>
@@ -124,6 +96,7 @@ defineExpose({ flushActive, jumpTo })
         v-show="tab.id === tabs.activeTabId"
         :ref="(el) => setEditorRef(tab.id, el as EditorInstance | null)"
         :tab="tab"
+        :locked="locked"
         @update="(md: string) => onEditorUpdate(tab, md)"
         @outline-change="(items: OutlineItem[], activeId: string | null) => onEditorOutline(tab, items, activeId)"
         @toggle-mode="onToggleMode"
@@ -133,6 +106,7 @@ defineExpose({ flushActive, jumpTo })
         v-show="tab.id === tabs.activeTabId"
         :ref="(el) => setEditorRef(tab.id, el as EditorInstance | null)"
         :tab="tab"
+        :locked="locked"
         @update="(md: string) => onEditorUpdate(tab, md)"
         @outline-change="(items: OutlineItem[], activeId: string | null) => onEditorOutline(tab, items, activeId)"
       />

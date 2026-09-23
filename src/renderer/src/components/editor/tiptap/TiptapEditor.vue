@@ -24,6 +24,7 @@ import './styles/notion-editor.css'
 
 const props = defineProps<{
   tab: EditorTab
+  locked: boolean
 }>()
 
 const emit = defineEmits<{
@@ -44,7 +45,7 @@ let syncTimer: ReturnType<typeof setTimeout> | null = null
 
 const editor = useEditor({
   content: props.tab.markdown,
-  editable: true,
+  editable: !props.locked,
   editorProps: {
     attributes: {
       autocomplete: 'off',
@@ -69,12 +70,14 @@ const editor = useEditor({
   }
 })
 
+watch(() => props.locked, (locked) => editor.value?.setEditable(!locked, false))
+
 function currentMarkdown(): string {
   return editor.value ? editor.value.getMarkdown() : props.tab.markdown
 }
 
 function scheduleSync(): void {
-  if (syncTimer) clearTimeout(syncTimer)
+  if (syncTimer) return
   syncTimer = setTimeout(() => {
     syncTimer = null
     emit('update', currentMarkdown())
@@ -83,6 +86,7 @@ function scheduleSync(): void {
 }
 
 function flush(): string {
+  if (!syncTimer) return props.tab.markdown
   if (syncTimer) {
     clearTimeout(syncTimer)
     syncTimer = null
@@ -233,7 +237,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
-  if (syncTimer) clearTimeout(syncTimer)
+  flush()
   if (tableToolbarRaf) cancelAnimationFrame(tableToolbarRaf)
   window.removeEventListener('resize', updateTableToolbar)
   wrapperRef.value?.removeEventListener('scroll', updateTableToolbar)
@@ -245,7 +249,7 @@ defineExpose({ flush, jumpTo, emitOutline })
 </script>
 
 <template>
-  <div ref="wrapperRef" class="tiptap-editor-wrapper">
+  <div ref="wrapperRef" class="tiptap-editor-wrapper" :inert="locked">
     <MenuBar v-if="editor" :editor="editor" :source-mode="false" :use-source-mode="true" :upload-fn="imageUploadFn"
       @toggle-source="emit('toggle-mode')" />
     <div v-show="editor" ref="editorContentRef" class="notion-editor-content">
@@ -258,7 +262,7 @@ defineExpose({ flush, jumpTo, emitOutline })
         </div>
       </BubbleMenu>
       <Teleport to="body">
-        <div v-if="tableToolbarVisible && editor" class="notion-table-toolbar" :style="tableToolbarStyle">
+        <div v-if="tableToolbarVisible && editor" class="notion-table-toolbar" :style="tableToolbarStyle" :inert="locked">
           <button class="ntb-btn" :title="$t('editor.addColBefore')"
             @click="editor.chain().focus().addColumnBefore().run()">
             <AddColumnBeforeIcon :size="18" />

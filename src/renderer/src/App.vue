@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed } from 'vue'
 import { NConfigProvider, NDialogProvider, NMessageProvider, darkTheme, zhCN, dateZhCN, enUS, dateEnUS } from 'naive-ui'
 import type { GlobalTheme } from 'naive-ui'
 import { useSettingsStore } from './stores/settings.store'
@@ -11,9 +11,6 @@ const naiveLocale = computed(() => (settings.language === 'en-US' ? enUS : zhCN)
 const naiveDateLocale = computed(() => (settings.language === 'en-US' ? dateEnUS : dateZhCN))
 const naiveTheme = computed<GlobalTheme | null>(() => (settings.isDark ? darkTheme : null))
 
-onMounted(() => {
-  void settings.load()
-})
 </script>
 
 <template>

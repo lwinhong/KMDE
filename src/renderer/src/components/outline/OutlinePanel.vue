@@ -5,6 +5,7 @@ import { useSettingsStore } from '../../stores/settings.store'
 
 const props = defineProps<{
   items: OutlineItem[]
+  hasDocument: boolean
   activeId: string | null
 }>()
 
@@ -46,7 +47,10 @@ function levelIndent(level: number): string {
           <span class="outline-text">{{ item.text || $t('outline.emptyTitle') }}</span>
         </div>
       </template>
-      <div v-else class="outline-empty">{{ $t('outline.empty1') }}<br />{{ $t('outline.empty2') }}</div>
+      <div v-else class="outline-empty">
+        {{ $t(hasDocument ? 'outline.empty1' : 'outline.noDocument') }}<br />
+        {{ $t(hasDocument ? 'outline.empty2' : 'outline.noDocumentHint') }}
+      </div>
     </div>
   </aside>
 </template>

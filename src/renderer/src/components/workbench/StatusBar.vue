@@ -23,7 +23,7 @@ const modeLabel = computed(() => (tabs.activeTab?.mode === 'source' ? t('statusb
   <div class="statusbar">
     <div class="statusbar-left">
       <span v-if="tabs.activeTab" class="statusbar-item" :title="tabs.activeTab.path ?? ''">
-        {{ tabs.activeTab.path ?? $t('statusbar.unsaved') }}
+        {{ tabs.activeTab.path ?? $t('statusbar.draft') }}
         <template v-if="tabs.activeTab.deleted">{{ $t('statusbar.fileDeleted') }}</template>
       </span>
       <span v-else class="statusbar-item">KMDE</span>

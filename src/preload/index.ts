@@ -3,6 +3,7 @@ import type { IpcRendererEvent } from 'electron'
 import type {
   AppLocale,
   AppSettings,
+  EditorSession,
   FileNode,
   FsEvent,
   MenuCommand,
@@ -48,6 +49,10 @@ const api = {
   saveSettings: (settings: AppSettings): Promise<boolean> =>
     ipcRenderer.invoke('settings:save', settings),
   setLocale: (locale: AppLocale): Promise<boolean> => ipcRenderer.invoke('app:set-locale', locale),
+
+  loadSession: (): Promise<EditorSession | null> => ipcRenderer.invoke('session:load'),
+  saveSession: (session: EditorSession): Promise<void> => ipcRenderer.invoke('session:save', session),
+  rendererReady: (): Promise<void> => ipcRenderer.invoke('app:renderer-ready'),
 
   exportHtml: (html: string, outPath: string): Promise<string> =>
     ipcRenderer.invoke('export:saveHtml', html, outPath),

@@ -25,6 +25,7 @@ import { useSettingsStore } from '@/stores/settings.store'
 
 const props = defineProps<{
   tab: EditorTab
+  locked: boolean
 }>()
 
 const emit = defineEmits<{
@@ -38,6 +39,13 @@ let view: EditorView | null = null
 let syncTimer: ReturnType<typeof setTimeout> | null = null
 
 const themeComp = new Compartment()
+const editableComp = new Compartment()
+
+watch(() => props.locked, (locked) => {
+  view?.dispatch({ effects: editableComp.reconfigure([
+    EditorView.editable.of(!locked), EditorState.readOnly.of(locked)
+  ]) })
+})
 
 const kmdeCmTheme = EditorView.theme({
   '&': {
@@ -88,6 +96,7 @@ function buildExtensions(): Extension[] {
     EditorView.lineWrapping,
     keymap.of([...defaultKeymap, ...historyKeymap, ...foldKeymap, ...searchKeymap, indentWithTab]),
     themeComp.of(highlight),
+    editableComp.of([EditorView.editable.of(!props.locked), EditorState.readOnly.of(props.locked)]),
     kmdeCmTheme,
     EditorView.updateListener.of((update) => {
       if (update.docChanged) {
@@ -104,7 +113,7 @@ function currentMarkdown(): string {
 }
 
 function scheduleSync(): void {
-  if (syncTimer) clearTimeout(syncTimer)
+  if (syncTimer) return
   syncTimer = setTimeout(() => {
     syncTimer = null
     emit('update', currentMarkdown())
@@ -113,6 +122,7 @@ function scheduleSync(): void {
 }
 
 function flush(): string {
+  if (!syncTimer) return props.tab.markdown
   if (syncTimer) {
     clearTimeout(syncTimer)
     syncTimer = null
@@ -171,7 +181,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
-  if (syncTimer) clearTimeout(syncTimer)
+  flush()
   view?.destroy()
   view = null
 })

@@ -76,7 +76,7 @@ export function createAppMenu(): void {
         cmd('quick-open', t('menu.quickOpen'), 'CmdOrCtrl+P'),
         cmd('command-palette', t('menu.commandPalette'), 'CmdOrCtrl+Shift+P'),
         { type: 'separator' },
-        { label: t('menu.reload'), accelerator: 'CmdOrCtrl+R', role: 'reload' },
+        cmd('reload', t('menu.reload'), 'CmdOrCtrl+R'),
         { label: t('menu.devTools'), accelerator: 'F12', role: 'toggleDevTools' },
         { label: t('menu.zoomIn'), accelerator: 'CmdOrCtrl+=', role: 'zoomIn' },
         { label: t('menu.zoomOut'), accelerator: 'CmdOrCtrl+-', role: 'zoomOut' },

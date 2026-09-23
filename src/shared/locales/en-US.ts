@@ -72,6 +72,7 @@ export default {
   },
   statusbar: {
     unsaved: 'Unsaved',
+    draft: 'Temporary draft (Ctrl+S to save to a file)',
     fileDeleted: ' (file deleted)',
     workspace: 'Workspace: {name}',
     indexing: ' (indexing…)',
@@ -125,6 +126,8 @@ export default {
     emptyTitle: '(empty heading)',
     empty1: 'No headings yet',
     empty2: 'Use # to create headings',
+    noDocument: 'No document open',
+    noDocumentHint: 'Open or create a document to see its headings',
     collapse: 'Collapse outline',
     expand: 'Expand outline'
   },
@@ -197,6 +200,8 @@ export default {
     openFileFailed: 'Failed to open file: {msg}',
     openFolderFailed: 'Failed to open folder: {msg}',
     restoreWorkspaceFailed: 'Could not restore the last workspace',
+    sessionRestoreFailed: 'Could not read the last session. Original data has been preserved. Check the app data permissions and session file, then restart.',
+    sessionSaveFailed: 'Could not save drafts or session. Do not force quit; check disk space and permissions, then retry.',
     saveFailed: 'Save failed',
     saved: 'Saved',
     openFileFirst: 'Open a file first',

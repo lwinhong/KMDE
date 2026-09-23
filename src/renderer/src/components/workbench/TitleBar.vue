@@ -138,7 +138,7 @@ function onMenuSelect(key: string | number): void {
       requestClose()
       break
     case 'reload':
-      location.reload()
+      emit('command', 'reload')
       break
     case 'tiptap-site':
       window.open('https://tiptap.dev', '_blank', 'noopener')

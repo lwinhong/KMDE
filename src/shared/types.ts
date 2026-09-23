@@ -61,6 +61,24 @@ export interface OutlineItem {
 
 export type EditorMode = 'wysiwyg' | 'source'
 
+export interface SessionTab {
+  id: string
+  path: string | null
+  fileName: string
+  markdown: string
+  dirty: boolean
+  mode: EditorMode
+  savedMtimeMs: number
+  deleted: boolean
+}
+
+export interface EditorSession {
+  version: 1
+  tabs: SessionTab[]
+  activeTabId: string | null
+  untitledSeq: number
+}
+
 export type MenuCommand =
   | 'new-file'
   | 'open-file'
@@ -76,6 +94,7 @@ export type MenuCommand =
   | 'command-palette'
   | 'close-tab'
   | 'show-settings-info'
+  | 'reload'
   | `set-language:${AppLocale}`
 
 export const MAX_WYSIWYG_FILE_SIZE = 2 * 1024 * 1024

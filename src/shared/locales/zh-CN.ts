@@ -70,6 +70,7 @@ export default {
   },
   statusbar: {
     unsaved: '未保存',
+    draft: '临时草稿（Ctrl+S 保存到文件）',
     fileDeleted: '（文件已删除）',
     workspace: '工作区: {name}',
     indexing: '（索引中…）',
@@ -123,6 +124,8 @@ export default {
     emptyTitle: '(空标题)',
     empty1: '暂无标题',
     empty2: '使用 # 号创建标题',
+    noDocument: '未打开文档',
+    noDocumentHint: '打开或新建文档后显示标题大纲',
     collapse: '折叠大纲',
     expand: '展开大纲'
   },
@@ -195,6 +198,8 @@ export default {
     openFileFailed: '打开文件失败: {msg}',
     openFolderFailed: '打开文件夹失败: {msg}',
     restoreWorkspaceFailed: '无法恢复上次的工作区',
+    sessionRestoreFailed: '无法读取上次会话，已保留原始数据。请检查应用数据目录的权限与会话文件后重新启动。',
+    sessionSaveFailed: '草稿或会话保存失败，请勿强制退出；检查磁盘空间和权限后重试。',
     saveFailed: '保存失败',
     saved: '已保存',
     openFileFirst: '请先打开一个文件',

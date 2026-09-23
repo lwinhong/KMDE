@@ -1,10 +1,11 @@
 import { app, BrowserWindow, dialog, ipcMain, protocol, shell } from 'electron'
 import { promises as fs, createReadStream, existsSync, statSync } from 'fs'
 import { join, extname, isAbsolute, resolve, dirname } from 'path'
-import type { AppSettings, FileNode } from '../../shared/types'
+import type { AppSettings, EditorSession, FileNode } from '../../shared/types'
 import { WatcherManager } from '../watcher'
 import { t } from '../i18n'
 import { readSettings, writeSettings } from '../settings'
+import { SessionStorage } from '../session'
 
 export function sendToRenderer(channel: string, ...args: unknown[]): void {
   const win = BrowserWindow.getAllWindows().find((w) => !w.isDestroyed())
@@ -205,6 +206,12 @@ function registerSettingsIpc(): void {
   })
 }
 
+function registerSessionIpc(): void {
+  const storage = new SessionStorage(join(app.getPath('userData'), 'session'))
+  ipcMain.handle('session:load', (): Promise<EditorSession | null> => storage.load())
+  ipcMain.handle('session:save', (_event, session: EditorSession): Promise<void> => storage.save(session))
+}
+
 const IMAGE_MIME: Record<string, string> = {
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
@@ -303,5 +310,6 @@ export function registerIpcHandlers(): void {
   registerFsIpc()
   registerDialogIpc()
   registerSettingsIpc()
+  registerSessionIpc()
   registerExportIpc()
 }

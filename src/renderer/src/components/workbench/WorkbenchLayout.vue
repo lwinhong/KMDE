@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { computed, onMounted, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, onMounted, onBeforeUnmount, ref, shallowRef, reactive, watch } from 'vue'
 import { useMessage } from 'naive-ui'
 import { useI18n } from 'vue-i18n'
 import { useSettingsStore } from '../../stores/settings.store'
 import { useTabsStore, MAX_TABS } from '../../stores/tabs.store'
 import { useWorkspaceStore } from '../../stores/workspace.store'
 import type { MenuCommand, FsEvent, OutlineItem } from '@shared/types'
-import type { EditorTab } from '../../stores/tabs.store'
+import { useDocumentPersistence } from '../../composables/useDocumentPersistence'
 import TabBar from './TabBar.vue'
 import TitleBar from './TitleBar.vue'
 import StatusBar from './StatusBar.vue'
@@ -25,6 +25,26 @@ const tabs = useTabsStore()
 const workspace = useWorkspaceStore()
 const message = useMessage()
 const { t } = useI18n()
+const persistence = useDocumentPersistence(() => {
+  if (!tabs.sessionError) message.error(t('editor.autosaveFailed'))
+})
+const initializing = shallowRef(true)
+const closingApp = shallowRef(false)
+const closingTabs = reactive(new Set<string>())
+let saveDialogOpen = false
+
+let sessionErrorNotice: ReturnType<typeof message.error> | undefined
+
+function notifySessionError(): void {
+  if (sessionErrorNotice) return
+  sessionErrorNotice = message.error(t('notify.sessionSaveFailed'), {
+    onAfterLeave: () => { sessionErrorNotice = undefined }
+  })
+}
+
+watch(() => tabs.sessionError, (failed) => {
+  if (failed) notifySessionError()
+})
 
 const editorAreaRef = ref<InstanceType<typeof EditorArea> | null>(null)
 const paletteRef = ref<InstanceType<typeof CommandPalette> | null>(null)
@@ -66,6 +86,7 @@ function runPaletteCommand(id: string): void {
 // ---------------- file actions ----------------
 
 async function openFileByPath(path: string): Promise<void> {
+  if (!tabs.sessionReady || closingApp.value || closingTabs.size) return
   try {
     const result = await tabs.openPath(path)
     if (!result) {
@@ -105,6 +126,7 @@ async function openLastWorkspace(): Promise<void> {
 }
 
 async function newFile(): Promise<void> {
+  if (!tabs.sessionReady || closingApp.value || closingTabs.size) return
   const result = tabs.newUntitled()
   if (!result) {
     message.warning(t('notify.tabLimitReached', { limit: MAX_TABS }))
@@ -114,6 +136,7 @@ async function newFile(): Promise<void> {
 // ---------------- command dispatch ----------------
 
 async function runCommand(command: MenuCommand): Promise<void> {
+  if (!tabs.sessionReady || closingApp.value || closingTabs.size) return
   if (command.startsWith('set-language:')) {
     const locale = command.slice('set-language:'.length)
     if (locale === 'zh-CN' || locale === 'en-US') {
@@ -134,9 +157,10 @@ async function runCommand(command: MenuCommand): Promise<void> {
     case 'save': {
       const tab = tabs.activeTab
       if (!tab) break
+      editorAreaRef.value?.flushTab(tab.id)
       const result = await tabs.saveTab(tab.id)
       if (result === 'need-path') {
-        await runCommand('save-as')
+        await saveAsTab(tab.id)
       } else if (result === 'error') {
         message.error(t('notify.saveFailed'))
       } else if (result === 'saved') {
@@ -147,15 +171,7 @@ async function runCommand(command: MenuCommand): Promise<void> {
     case 'save-as': {
       const tab = tabs.activeTab
       if (!tab) break
-      const target = await window.kmde.saveAsDialog(tab.fileName.endsWith('.md') ? tab.fileName : `${tab.fileName}.md`)
-      if (target) {
-        const result = await tabs.saveTabAs(tab.id, target)
-        if (result === 'saved') {
-          message.success(t('notify.saved'))
-        } else if (result === 'error') {
-          message.error(t('notify.saveFailed'))
-        }
-      }
+      await saveAsTab(tab.id)
       break
     }
     case 'export': {
@@ -172,6 +188,7 @@ async function runCommand(command: MenuCommand): Promise<void> {
         message.warning(t('notify.fileLoading'))
         break
       }
+      editorAreaRef.value?.flushTab(tab.id)
       exportRef.value?.open(tab)
       break
     }
@@ -206,38 +223,86 @@ async function runCommand(command: MenuCommand): Promise<void> {
     case 'show-settings-info':
       aboutRef.value?.open()
       break
+    case 'reload':
+      await requestCloseApp(true)
+      break
+  }
+}
+
+async function saveAsTab(id: string): Promise<void> {
+  const tab = tabs.tabs.find((item) => item.id === id)
+  if (!tab || tab.loading || saveDialogOpen) return
+  saveDialogOpen = true
+  try {
+    const target = await window.kmde.saveAsDialog(tab.path ?? tab.fileName)
+    if (!target) return
+    editorAreaRef.value?.flushTab(id)
+    const result = await tabs.saveTabAs(id, target)
+    if (result === 'saved') message.success(t('notify.saved'))
+    else if (result === 'error') message.error(t('notify.saveFailed'))
+  } finally {
+    saveDialogOpen = false
   }
 }
 
 async function closeTab(id: string): Promise<void> {
-  const tab = tabs.tabs.find((t) => t.id === id)
-  if (!tab) return
-  if (tab.dirty && !isPristineUntitled(tab)) {
-    // naive-ui dialog via window.confirm would be ugly; use a lightweight confirm
-    const ok = window.confirm(t('notify.unsavedCloseConfirm', { name: tab.fileName }))
-    if (ok) {
-      const saved = await tabs.flushSave(id)
-      if (!saved) return
-    }
-  }
-  tabs.removeTab(id)
-}
-
-function isPristineUntitled(tab: EditorTab): boolean {
-  return tab.path === null && tab.markdown === '' && !tab.deleted
-}
-
-async function requestCloseApp(): Promise<void> {
-  for (const tab of [...tabs.tabs]) {
-    if ((tab.dirty || tab.deleted) && !isPristineUntitled(tab)) {
+  const tab = tabs.tabs.find((item) => item.id === id)
+  if (!tab || closingApp.value || closingTabs.size || saveDialogOpen || !tabs.sessionReady) return
+  closingTabs.add(id)
+  persistence.pause()
+  try {
+    editorAreaRef.value?.flushTab(id)
+    await tabs.waitForSaves()
+    editorAreaRef.value?.flushTab(id)
+    if (tab.path && (tab.dirty || tab.deleted)) {
       const ok = window.confirm(t('notify.unsavedCloseConfirm', { name: tab.fileName }))
-      if (ok) {
-        const saved = await tabs.flushSave(tab.id)
-        if (!saved) return
-      }
+      if (ok && !await tabs.flushSave(id)) return
+    }
+    // 先保全草稿再移出打开列表；关闭标签不删除临时文件。
+    if (!await persistence.flush()) {
+      notifySessionError()
+      return
+    }
+    tabs.removeTab(id)
+    if (!await persistence.flush()) notifySessionError()
+  } finally {
+    closingTabs.delete(id)
+    if (!closingTabs.size) persistence.resume()
+  }
+}
+
+async function requestCloseApp(reload = false): Promise<void> {
+  if (closingApp.value) return
+  if (initializing.value || saveDialogOpen || closingTabs.size || tabs.tabs.some((tab) => tab.loading)) {
+    message.warning(t('notify.fileLoading'))
+    return
+  }
+  // 恢复失败时允许退出，但绝不以空会话覆盖原文件。
+  if (!tabs.sessionReady) {
+    if (reload) location.reload()
+    else window.kmde.closeWindow()
+    return
+  }
+  closingApp.value = true
+  persistence.pause()
+  let committed = false
+  try {
+    editorAreaRef.value?.flushAll()
+    await tabs.waitForSaves()
+    editorAreaRef.value?.flushAll()
+    if (!await persistence.flush()) {
+      notifySessionError()
+      return
+    }
+    committed = true
+    if (reload) location.reload()
+    else window.kmde.closeWindow()
+  } finally {
+    if (!committed) {
+      closingApp.value = false
+      persistence.resume()
     }
   }
-  window.kmde.closeWindow()
 }
 
 // ---------------- external events ----------------
@@ -300,16 +365,22 @@ onMounted(async () => {
     })
   )
 
-  // restore last workspace automatically
-  if (settings.lastWorkspace) {
-    try {
-      const exists = await window.kmde.exists(settings.lastWorkspace)
-      if (exists) {
-        await workspace.openFolder(settings.lastWorkspace)
+  try {
+    await settings.load()
+    await tabs.restoreSession()
+    if (settings.lastWorkspace) {
+      try {
+        if (await window.kmde.exists(settings.lastWorkspace)) await workspace.openFolder(settings.lastWorkspace)
+      } catch {
+        message.warning(t('notify.restoreWorkspaceFailed'))
       }
-    } catch {
-      // ignore
     }
+    await window.kmde.rendererReady()
+  } catch (error) {
+    console.error('[session] 恢复失败:', error)
+    message.error(t('notify.sessionRestoreFailed'), { duration: 0, closable: true })
+  } finally {
+    initializing.value = false
   }
 })
 
@@ -338,13 +409,14 @@ function onOutlineResize(delta: number): void {
 
 <template>
   <div class="workbench" @dragover.prevent @drop.prevent="handleDrop">
-    <TitleBar @command="runCommand" @request-close="requestCloseApp" />
+    <TitleBar @command="runCommand" @request-close="requestCloseApp()" />
     <TabBar
       v-if="tabs.activeTab"
+      :inert="closingApp || closingTabs.size > 0 || !tabs.sessionReady"
       @new-file="newFile()"
       @close-tab="closeTab"
     />
-    <div class="workbench-main">
+    <div class="workbench-main" :inert="closingApp || closingTabs.size > 0 || !tabs.sessionReady">
       <FileTree v-if="settings.sidebarVisible" @open-file="openFileByPath" />
       <Resizer
         v-if="settings.sidebarVisible"
@@ -355,9 +427,9 @@ function onOutlineResize(delta: number): void {
       <EditorArea
         v-if="tabs.activeTab"
         ref="editorAreaRef"
+        :locked="closingApp || closingTabs.size > 0"
         @outline-change="handleOutlineChange"
-        @request-save="(id: string) => runCommand('save')"
-        @request-save-as="(id: string) => runCommand('save-as')"
+        @request-save-as="saveAsTab"
       />
       <WelcomePage
         v-else
@@ -367,14 +439,15 @@ function onOutlineResize(delta: number): void {
         @resume-workspace="openLastWorkspace"
       />
       <Resizer
-        v-if="settings.outlineVisible && tabs.activeTab"
+        v-if="settings.outlineVisible"
         side="right"
         @resize="onOutlineResize"
         @resize-end="settings.persist()"
       />
       <OutlinePanel
-        v-if="settings.outlineVisible && tabs.activeTab"
+        v-if="settings.outlineVisible"
         :items="outlineItems"
+        :has-document="!!tabs.activeTab"
         :active-id="outlineActiveId"
         @jump="handleOutlineJump"
       />

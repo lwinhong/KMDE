@@ -1,19 +1,11 @@
 import { defineStore } from 'pinia'
 import { basename, dirname, extname } from './pathUtils'
 import { MAX_WYSIWYG_FILE_SIZE } from '@shared/types'
-import type { EditorMode } from '@shared/types'
+import type { EditorMode, EditorSession, SessionTab } from '@shared/types'
 import { useSettingsStore } from './settings.store'
 import { t } from '@/i18n'
 
-export interface EditorTab {
-  id: string
-  path: string | null
-  fileName: string
-  markdown: string
-  dirty: boolean
-  mode: EditorMode
-  savedMtimeMs: number
-  deleted: boolean
+export interface EditorTab extends SessionTab {
   reloadToken: number
   loading: boolean
 }
@@ -25,7 +17,12 @@ export interface TabConflict {
   mtimeMs: number
 }
 
-let tabSeq = 0
+type SaveResult = 'saved' | 'need-path' | 'error' | 'loading'
+const pendingSaves = new Map<string, Promise<SaveResult>>()
+
+function pathKey(path: string): string {
+  return path.replace(/\\/g, '/').toLowerCase()
+}
 
 export const MAX_TABS = 12
 
@@ -34,7 +31,11 @@ export const useTabsStore = defineStore('tabs', {
     tabs: [] as EditorTab[],
     activeTabId: null as string | null,
     conflict: null as TabConflict | null,
-    saving: false
+    conflictQueue: [] as TabConflict[],
+    saving: false,
+    untitledSeq: 0,
+    sessionReady: false,
+    sessionError: false
   }),
   getters: {
     activeTab(state): EditorTab | null {
@@ -43,7 +44,80 @@ export const useTabsStore = defineStore('tabs', {
   },
   actions: {
     byPath(path: string): EditorTab | null {
-      return this.tabs.find((t) => t.path === path) ?? null
+      return this.tabs.find((t) => t.path && pathKey(t.path) === pathKey(path)) ?? null
+    },
+
+    sessionSnapshot(): EditorSession {
+      const tabs = this.tabs.filter((tab) => !tab.loading).map((tab): SessionTab => ({
+        id: tab.id, path: tab.path, fileName: tab.fileName, markdown: tab.markdown,
+        dirty: tab.dirty, mode: tab.mode, savedMtimeMs: tab.savedMtimeMs, deleted: tab.deleted
+      }))
+      return {
+        version: 1, tabs, untitledSeq: this.untitledSeq,
+        activeTabId: tabs.some((tab) => tab.id === this.activeTabId) ? this.activeTabId : tabs[0]?.id ?? null
+      }
+    },
+
+    async persistSession(): Promise<boolean> {
+      if (!this.sessionReady) return false
+      try {
+        await window.kmde.saveSession(this.sessionSnapshot())
+        this.sessionError = false
+        return true
+      } catch (error) {
+        this.sessionError = true
+        console.error('[session] 保存失败:', error)
+        return false
+      }
+    },
+
+    async restoreSession(): Promise<void> {
+      this.sessionReady = false
+      const session = await window.kmde.loadSession()
+      const restored: EditorTab[] = []
+      const conflicts: TabConflict[] = []
+      this.conflict = null
+      this.conflictQueue = []
+      for (const saved of session?.tabs ?? []) {
+        if (saved.path && restored.some((tab) => tab.path && pathKey(tab.path) === pathKey(saved.path!))) continue
+        const tab: EditorTab = { ...saved, reloadToken: 0, loading: false }
+        if (tab.path) {
+          try {
+            const disk = await window.kmde.readFile(tab.path)
+            if (!tab.dirty || disk.content === tab.markdown) {
+              tab.markdown = disk.content
+              tab.dirty = false
+              tab.savedMtimeMs = disk.mtimeMs
+            } else if (disk.mtimeMs !== tab.savedMtimeMs) {
+              conflicts.push({ tabId: tab.id, path: tab.path, diskContent: disk.content, mtimeMs: disk.mtimeMs })
+            }
+            tab.deleted = false
+          } catch {
+            // 保留快照，不用空白覆盖无法读取或已被删除的文档。
+            tab.deleted = true
+          }
+        }
+        if (tab.markdown.length > MAX_WYSIWYG_FILE_SIZE) tab.mode = 'source'
+        restored.push(tab)
+      }
+      this.tabs = restored
+      this.conflict = conflicts.shift() ?? null
+      this.conflictQueue = conflicts
+      this.untitledSeq = session?.untitledSeq ?? 0
+      this.activeTabId = restored.find((tab) => tab.id === session?.activeTabId)?.id ?? restored[0]?.id ?? null
+      this.sessionReady = true
+    },
+
+    hasConflict(id: string): boolean {
+      return this.conflict?.tabId === id || this.conflictQueue.some((conflict) => conflict.tabId === id)
+    },
+
+    enqueueConflict(conflict: TabConflict): void {
+      if (!this.conflict || this.conflict.tabId === conflict.tabId) this.conflict = conflict
+      else {
+        this.conflictQueue = this.conflictQueue.filter((item) => item.tabId !== conflict.tabId)
+        this.conflictQueue.push(conflict)
+      }
     },
 
     updateTabContent(id: string, markdown: string): void {
@@ -69,7 +143,7 @@ export const useTabsStore = defineStore('tabs', {
       if (this.tabs.length >= MAX_TABS) return null
       // two-phase open: mount the tab immediately with a skeleton, fill content once read
       const tab: EditorTab = {
-        id: `tab-${++tabSeq}`,
+        id: crypto.randomUUID(),
         path,
         fileName: basename(path),
         markdown: '',
@@ -123,9 +197,9 @@ export const useTabsStore = defineStore('tabs', {
       if (this.tabs.length >= MAX_TABS) return null
       const settings = useSettingsStore()
       const tab: EditorTab = {
-        id: `tab-${++tabSeq}`,
+        id: crypto.randomUUID(),
         path: null,
-        fileName: `${t('tabs.untitled')}-${tabSeq}.md`,
+        fileName: `${t('tabs.untitled')}-${++this.untitledSeq}.md`,
         markdown: '',
         dirty: true,
         mode: settings.defaultMode,
@@ -153,55 +227,61 @@ export const useTabsStore = defineStore('tabs', {
         const next = this.tabs[Math.min(idx, this.tabs.length - 1)]
         this.activeTabId = next ? next.id : null
       }
-      if (this.conflict && this.conflict.tabId === id) {
-        this.conflict = null
-      }
+      this.conflictQueue = this.conflictQueue.filter((conflict) => conflict.tabId !== id)
+      if (this.conflict?.tabId === id) this.conflict = this.conflictQueue.shift() ?? null
     },
 
-    async saveTab(id: string): Promise<'saved' | 'need-path' | 'error' | 'loading'> {
-      const tab = this.tabs.find((t) => t.id === id)
-      if (!tab) return 'error'
-      if (tab.loading) return 'loading'
-      if (!tab.path || tab.deleted) {
-        return 'need-path'
-      }
-      const snapshot = tab.markdown
-      try {
-        this.saving = true
-        const { mtimeMs } = await window.kmde.writeFile(tab.path, snapshot)
-        if (tab.markdown === snapshot) {
-          tab.dirty = false
+    saveTab(id: string): Promise<SaveResult> {
+      return this.queueSave(id)
+    },
+
+    saveTabAs(id: string, targetPath: string): Promise<SaveResult> {
+      return this.queueSave(id, targetPath)
+    },
+
+    queueSave(id: string, targetPath?: string): Promise<SaveResult> {
+      const previous = pendingSaves.get(id) ?? Promise.resolve()
+      const operation = previous.then(async (): Promise<SaveResult> => {
+        const tab = this.tabs.find((item) => item.id === id)
+        if (!tab) return 'error'
+        if (tab.loading) return 'loading'
+        if (this.hasConflict(id)) return 'error'
+        const path = targetPath ?? tab.path
+        if (!path || (!targetPath && tab.deleted)) return 'need-path'
+        const existing = this.byPath(path)
+        if (existing && existing.id !== id) return 'error'
+        const snapshot = tab.markdown
+        const identity = { path: tab.path, fileName: tab.fileName, savedMtimeMs: tab.savedMtimeMs, deleted: tab.deleted }
+        try {
+          const { mtimeMs } = await window.kmde.writeFile(path, snapshot)
+          tab.path = path
+          tab.fileName = basename(path)
+          tab.dirty = tab.markdown !== snapshot
+          tab.deleted = false
           tab.savedMtimeMs = mtimeMs
+          // 会话引用提交成功后，主进程才清理对应草稿。
+          if (await this.persistSession()) return 'saved'
+          if (targetPath) {
+            Object.assign(tab, identity)
+            tab.dirty = true
+          }
+          return 'error'
+        } catch (error) {
+          console.error('[tabs] 保存失败:', error)
+          return 'error'
         }
-        return 'saved'
-      } catch (err) {
-        console.error('[tabs] save failed:', err)
-        return 'error'
-      } finally {
-        this.saving = false
-      }
+      })
+      pendingSaves.set(id, operation)
+      this.saving = true
+      void operation.finally(() => {
+        if (pendingSaves.get(id) === operation) pendingSaves.delete(id)
+        this.saving = pendingSaves.size > 0
+      })
+      return operation
     },
 
-    async saveTabAs(id: string, targetPath: string): Promise<'saved' | 'error' | 'loading'> {
-      const tab = this.tabs.find((t) => t.id === id)
-      if (!tab) return 'error'
-      if (tab.loading) return 'loading'
-      const snapshot = tab.markdown
-      try {
-        this.saving = true
-        const { mtimeMs } = await window.kmde.writeFile(targetPath, snapshot)
-        tab.path = targetPath
-        tab.fileName = basename(targetPath)
-        tab.dirty = false
-        tab.deleted = false
-        tab.savedMtimeMs = mtimeMs
-        return 'saved'
-      } catch (err) {
-        console.error('[tabs] save-as failed:', err)
-        return 'error'
-      } finally {
-        this.saving = false
-      }
+    async waitForSaves(): Promise<void> {
+      while (pendingSaves.size) await Promise.all([...pendingSaves.values()])
     },
 
     async flushSave(id: string): Promise<boolean> {
@@ -260,7 +340,7 @@ export const useTabsStore = defineStore('tabs', {
         tab.savedMtimeMs = mtimeMs
         return 'clean'
       }
-      this.conflict = { tabId: tab.id, path, diskContent: content, mtimeMs }
+      this.enqueueConflict({ tabId: tab.id, path, diskContent: content, mtimeMs })
       return 'conflict'
     },
 
@@ -275,7 +355,7 @@ export const useTabsStore = defineStore('tabs', {
         tab.savedMtimeMs = conflict.mtimeMs
         tab.reloadToken++
       }
-      this.conflict = null
+      this.conflict = this.conflictQueue.shift() ?? null
     }
   }
 })
