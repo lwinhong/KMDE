@@ -5,7 +5,7 @@ import type { TestContext } from 'node:test'
 import { setImmediate as nextTurn } from 'node:timers/promises'
 import { createPinia, disposePinia, setActivePinia } from 'pinia'
 import type { KmdeApi } from '../../../preload'
-import type { EditorSelectionState, EditorSession, ReadFileResult, SessionSaveOptions, SessionSaveResult, SessionTab } from '@shared/types'
+import type { EditorMode, EditorSelectionState, EditorSession, ReadFileResult, SessionSaveOptions, SessionSaveResult, SessionTab } from '@shared/types'
 import { MAX_WYSIWYG_FILE_SIZE } from '@shared/types'
 import { i18n } from '../i18n'
 import { useTabsStore } from './tabs.store'
@@ -205,37 +205,78 @@ describe('会话恢复与标签保存契约', { concurrency: false, timeout: 500
     assert.equal(tab.dirty, false)
   })
 
-  test('setMode 同模式保留光标，真正切换与 toggleMode 清理旧坐标并拒绝迟到事件', async (t) => {
+  test('setMode 同模式保留光标，toggleMode 三态循环清旧坐标，迟到光标按新坐标系校验', async (t) => {
     const first = savedTab({ dirty: false })
     const second = savedTab({ selection: { mode: 'wysiwyg', anchor: 1, head: 3 } })
     const { store } = fixture(t, sessionOf(first, second))
     await store.restoreSession()
     const tab = store.tabs[0]
     const otherSelection = store.tabs[1].selection
-    for (const action of ['setMode', 'toggleMode'] as const) {
-      for (let direction = 0; direction < 2; direction++) {
-        const previous: EditorSelectionState = { mode: tab.mode, anchor: 2, head: 6 }
-        store.updateTabSelection(tab.id, previous)
-        const stored = tab.selection
-        store.setMode(tab.id, tab.mode)
-        assert.equal(tab.selection, stored)
-        const nextMode = tab.mode === 'wysiwyg' ? 'source' : 'wysiwyg'
-        if (action === 'setMode') store.setMode(tab.id, nextMode)
-        else store.toggleMode(tab.id)
-        assert.equal(tab.mode, nextMode)
-        assert.equal(Object.hasOwn(tab, 'selection'), false)
-        assert.equal(Object.hasOwn(store.sessionSnapshot().tabs[0], 'selection'), false)
-        store.updateTabSelection(tab.id, previous)
-        assert.equal(Object.hasOwn(tab, 'selection'), false)
-        assert.equal(tab.markdown, first.markdown)
-        assert.equal(tab.dirty, false)
-        assert.equal(store.tabs[1].selection, otherSelection)
-      }
+    // toggleMode 循环：所见即所得 → 源码 → 分屏 → 所见即所得。
+    // 单模式迟到光标被拒绝；分屏页签的迟到光标只要坐标系合法就会被接受。
+    const cycle: Array<{ next: EditorMode; acceptsLate: boolean }> = [
+      { next: 'source', acceptsLate: false },
+      { next: 'split', acceptsLate: true },
+      { next: 'wysiwyg', acceptsLate: false }
+    ]
+    for (const { next, acceptsLate } of cycle) {
+      const previous: EditorSelectionState = { mode: tab.mode === 'split' ? 'source' : tab.mode, anchor: 2, head: 6 }
+      store.updateTabSelection(tab.id, previous)
+      const stored = tab.selection
+      store.setMode(tab.id, tab.mode)
+      assert.equal(tab.selection, stored)
+      store.toggleMode(tab.id)
+      assert.equal(tab.mode, next)
+      assert.equal(Object.hasOwn(tab, 'selection'), false)
+      assert.equal(Object.hasOwn(store.sessionSnapshot().tabs[0], 'selection'), false)
+      store.updateTabSelection(tab.id, previous)
+      if (acceptsLate) assert.deepEqual(tab.selection, previous)
+      else assert.equal(Object.hasOwn(tab, 'selection'), false)
+      assert.equal(tab.markdown, first.markdown)
+      assert.equal(tab.dirty, false)
+      assert.equal(store.tabs[1].selection, otherSelection)
     }
+    // setMode 真正切换同样清旧坐标，且切到分屏后接受面板光标。
+    store.updateTabSelection(tab.id, { mode: 'wysiwyg', anchor: 1, head: 4 })
+    store.setMode(tab.id, 'split')
+    assert.equal(tab.mode, 'split')
+    assert.equal(Object.hasOwn(tab, 'selection'), false)
+    store.updateTabSelection(tab.id, { mode: 'source', anchor: 9, head: 9 })
+    assert.deepEqual(tab.selection, { mode: 'source', anchor: 9, head: 9 })
     const before = store.sessionSnapshot()
     store.setMode(randomUUID(), 'source')
     store.toggleMode(randomUUID())
     assert.deepEqual(store.sessionSnapshot(), before)
+  })
+
+  test('分屏页签接受任一面板光标，单模式页签仍要求坐标系匹配', async (t) => {
+    const split = savedTab({ mode: 'split' })
+    const source = savedTab({ mode: 'source' })
+    const { store } = fixture(t, sessionOf(split, source))
+    await store.restoreSession()
+    store.updateTabSelection(split.id, { mode: 'wysiwyg', anchor: 4, head: 5 })
+    assert.deepEqual(store.tabs[0].selection, { mode: 'wysiwyg', anchor: 4, head: 5 })
+    store.updateTabSelection(split.id, { mode: 'source', anchor: 6, head: 7 })
+    assert.deepEqual(store.tabs[0].selection, { mode: 'source', anchor: 6, head: 7 })
+    store.updateTabSelection(source.id, { mode: 'wysiwyg', anchor: 6, head: 7 })
+    assert.equal(Object.hasOwn(store.tabs[1], 'selection'), false)
+  })
+
+  test('恢复分屏页签保留面板光标，大文档分屏降级纯源码并清理不匹配光标', async (t) => {
+    const large = 'x'.repeat(MAX_WYSIWYG_FILE_SIZE + 1)
+    const wysiwyg: EditorSelectionState = { mode: 'wysiwyg', anchor: 1, head: 2 }
+    const source: EditorSelectionState = { mode: 'source', anchor: 0, head: 3 }
+    const normalSplit = savedTab({ mode: 'split', selection: { ...source } })
+    const largeSplitKept = savedTab({ markdown: large, mode: 'split', selection: { ...source } })
+    const largeSplitDropped = savedTab({ markdown: large, mode: 'split', selection: { ...wysiwyg } })
+    const largeSource = savedTab({ markdown: large, mode: 'source', selection: { ...source } })
+    const { store } = fixture(t, sessionOf(normalSplit, largeSplitKept, largeSplitDropped, largeSource))
+    await store.restoreSession()
+    assert.deepEqual(store.tabs.map((tab) => tab.mode), ['split', 'source', 'source', 'source'])
+    assert.deepEqual(store.tabs[0].selection, source)
+    assert.deepEqual(store.tabs[1].selection, source)
+    assert.equal(Object.hasOwn(store.tabs[2], 'selection'), false)
+    assert.deepEqual(store.tabs[3].selection, source)
   })
 
   test('恢复大文档强制 source 时仅保留匹配光标，边界大小不切换模式', async (t) => {

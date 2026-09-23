@@ -26,7 +26,7 @@ export default {
     selectAll: '全选',
     closeTab: '关闭标签页',
     view: '视图',
-    toggleMode: '切换 源码/所见即所得 模式',
+    toggleMode: '切换编辑模式（所见即所得 / 源码 / 分屏）',
     toggleSidebar: '切换侧边栏',
     toggleOutline: '切换大纲面板',
     toggleTheme: '切换深色/浅色主题',
@@ -77,7 +77,8 @@ export default {
     charCount: '{count} 字',
     sourceMode: '源码模式',
     wysiwygMode: '所见即所得',
-    toggleModeHint: '点击切换 源码 / 所见即所得 模式',
+    splitMode: '分屏模式',
+    toggleModeHint: '点击循环切换 所见即所得 / 源码 / 分屏 模式',
     toggleTheme: '切换主题 (F11)',
     dark: '🌙 深色',
     light: '☀️ 浅色'
@@ -94,13 +95,13 @@ export default {
   },
   welcome: {
     subtitle: 'K Markdown Editor',
-    hint: '所见即所得 · 源码模式 · 文件关联',
+    hint: '所见即所得 · 源码模式 · 分屏对照 · 文件关联',
     openFile: '打开文件',
     openFolder: '打开文件夹',
     newFile: '新建文件',
     resumeWorkspace: '恢复上次工作区',
     tip1: '提示：安装后双击 .md 文件可直接用 KMDE 打开',
-    tip2: 'Ctrl+P 快速打开文件 · Ctrl+/ 切换源码模式 · Ctrl+Shift+P 命令面板',
+    tip2: 'Ctrl+P 快速打开文件 · Ctrl+/ 循环切换编辑模式 · Ctrl+Shift+P 命令面板',
     tip3: '也可以直接把 .md 文件拖入窗口'
   },
   tabbar: {
@@ -241,7 +242,7 @@ export default {
     save: '保存',
     saveAs: '另存为…',
     export: '导出 HTML / PDF…',
-    toggleMode: '切换 源码 / 所见即所得 模式',
+    toggleMode: '切换编辑模式（所见即所得 / 源码 / 分屏）',
     toggleSidebar: '显示 / 隐藏 侧边栏',
     toggleOutline: '显示 / 隐藏 大纲面板',
     toggleTheme: '切换 明亮 / 暗黑 主题',

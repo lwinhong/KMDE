@@ -169,6 +169,16 @@ test('光标与反向选区按模式精确往返，旧 version 1 页签不补 se
   assert.deepEqual(await storage.load(), expected)
 })
 
+test('分屏模式与两个面板坐标系的光标跨会话往返', async (t) => {
+  const { root, storage, snapshotPath } = await fixture(t)
+  const wysiwygPane = makeTab({ mode: 'split', selection: { mode: 'wysiwyg', anchor: 3, head: 5 } })
+  const sourcePane = makeTab({ mode: 'split', selection: { mode: 'source', anchor: 8, head: 1 } })
+  const expected = makeSession(wysiwygPane, sourcePane)
+  await storage.save(expected)
+  assert.deepEqual(await readManifest(snapshotPath), expected)
+  assert.deepEqual(await new SessionStorage(root).load(), expected)
+})
+
 test('坏 selection 在 load/save 中降级忽略，保留文档及其他页签的合法光标', async (t) => {
   const { root, storage, snapshotPath } = await fixture(t)
   await fs.mkdir(root, { recursive: true })

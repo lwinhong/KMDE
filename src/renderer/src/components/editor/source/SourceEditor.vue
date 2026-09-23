@@ -12,7 +12,7 @@ import {
   crosshairCursor,
   highlightActiveLine
 } from '@codemirror/view'
-import { EditorState, Compartment, EditorSelection, type Extension } from '@codemirror/state'
+import { EditorState, Compartment, EditorSelection, Transaction, type Extension } from '@codemirror/state'
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands'
 import { foldGutter, indentOnInput, bracketMatching, foldKeymap, syntaxHighlighting, defaultHighlightStyle } from '@codemirror/language'
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown'
@@ -21,6 +21,7 @@ import { oneDark } from '@codemirror/theme-one-dark'
 import { SearchQuery, search, setSearchQuery } from '@codemirror/search'
 import type { EditorSelectionState, OutlineItem } from '@shared/types'
 import type { EditorTab } from '@/stores/tabs.store'
+import { computeTextDiff } from '@/utils/textDiff'
 import { useSettingsStore } from '@/stores/settings.store'
 
 const props = defineProps<{
@@ -122,6 +123,18 @@ function getSelection(): EditorSelectionState | null {
 
 function whenReady(): Promise<boolean> {
   return Promise.resolve(view !== null)
+}
+
+function getScrollElement(): HTMLElement | null {
+  return view?.scrollDOM ?? null
+}
+
+function applyExternalContent(markdown: string): void {
+  if (!view) return
+  // 最小差异替换，保住光标与滚动位置；remote 标注避免对侧同步进入撤销历史。
+  const change = computeTextDiff(view.state.doc.toString(), markdown)
+  if (!change) return
+  view.dispatch({ changes: change, annotations: Transaction.remote.of(true) })
 }
 
 function focus(): void {
@@ -339,6 +352,8 @@ defineExpose({
   getSelection,
   whenReady,
   focus,
+  getScrollElement,
+  applyExternalContent,
   flush,
   jumpTo,
   emitOutline,

@@ -20,7 +20,12 @@ const charCount = computed(() => {
   return tab.markdown.replace(/\s/g, '').length
 })
 
-const modeLabel = computed(() => (tabs.activeTab?.mode === 'source' ? t('statusbar.sourceMode') : t('statusbar.wysiwygMode')))
+const modeLabel = computed(() => {
+  const mode = tabs.activeTab?.mode
+  if (mode === 'source') return t('statusbar.sourceMode')
+  if (mode === 'split') return t('statusbar.splitMode')
+  return t('statusbar.wysiwygMode')
+})
 </script>
 
 <template>

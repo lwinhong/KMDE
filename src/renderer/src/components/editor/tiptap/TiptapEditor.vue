@@ -137,6 +137,24 @@ function focus(): void {
   e.view.dispatch(e.state.tr.scrollIntoView())
 }
 
+function getScrollElement(): HTMLElement | null {
+  return editorContentRef.value
+}
+
+function applyExternalContent(markdown: string): void {
+  const e = editor.value
+  if (!ready || !e || e.isDestroyed || e.getMarkdown() === markdown) return
+  // 分屏对侧编辑时的全量替换：查看侧无光标可保，按比例恢复滚动位置避免跳顶。
+  const scroller = editorContentRef.value
+  const ratio = scroller && scroller.scrollHeight > scroller.clientHeight
+    ? scroller.scrollTop / (scroller.scrollHeight - scroller.clientHeight)
+    : null
+  e.commands.setContent(markdown, { contentType: 'markdown' })
+  if (scroller && ratio !== null) {
+    scroller.scrollTop = ratio * (scroller.scrollHeight - scroller.clientHeight)
+  }
+}
+
 function scheduleSync(): void {
   if (syncTimer) return
   syncTimer = setTimeout(() => {
@@ -429,6 +447,8 @@ defineExpose({
   getSelection,
   whenReady,
   focus,
+  getScrollElement,
+  applyExternalContent,
   flush,
   jumpTo,
   emitOutline,

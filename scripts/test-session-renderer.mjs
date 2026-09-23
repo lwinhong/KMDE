@@ -4,14 +4,16 @@ import { resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { build } from 'vite'
 
-// 用法：node scripts/test-session-renderer.mjs [store|persistence]
+// 用法：node scripts/test-session-renderer.mjs [store|persistence|textdiff|scrollsync]
 // 只在内存中转译，不读取应用构建配置、不生成产物、不安装依赖。
 const root = fileURLToPath(new URL('../', import.meta.url))
 const suites = {
   store: 'src/renderer/src/stores/tabs.store.test.ts',
   persistence: 'src/renderer/src/composables/useDocumentPersistence.test.ts',
   workspace: 'src/renderer/src/stores/workspace.store.test.ts',
-  tree: 'src/renderer/src/composables/useFileTree.test.ts'
+  tree: 'src/renderer/src/composables/useFileTree.test.ts',
+  textdiff: 'src/renderer/src/utils/textDiff.test.ts',
+  scrollsync: 'src/renderer/src/composables/useScrollSync.test.ts'
 }
 const selected = process.argv.slice(2)
 if (selected.some((name) => !Object.hasOwn(suites, name))) {

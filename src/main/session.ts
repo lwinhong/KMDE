@@ -58,7 +58,7 @@ function validateSession(value: unknown): EditorSession {
       typeof tab.fileName !== 'string' || tab.fileName.length === 0 ||
       /[\\/\0]/.test(tab.fileName) || tab.fileName === '.' || tab.fileName === '..' ||
       typeof tab.markdown !== 'string' || typeof tab.dirty !== 'boolean' ||
-      typeof tab.deleted !== 'boolean' || (tab.mode !== 'wysiwyg' && tab.mode !== 'source') ||
+      typeof tab.deleted !== 'boolean' || (tab.mode !== 'wysiwyg' && tab.mode !== 'source' && tab.mode !== 'split') ||
       typeof tab.savedMtimeMs !== 'number' || !Number.isFinite(tab.savedMtimeMs)
     ) {
       throw new Error('会话页签字段无效')

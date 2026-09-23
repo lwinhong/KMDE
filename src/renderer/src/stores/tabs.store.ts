@@ -113,8 +113,9 @@ export const useTabsStore = defineStore('tabs', {
             tab.deleted = true
           }
         }
-        if (tab.markdown.length > MAX_WYSIWYG_FILE_SIZE) tab.mode = 'source'
-        if (tab.selection && tab.selection.mode !== tab.mode) delete tab.selection
+        // 分屏同样要渲染富文本视图，超大文件统一降级到纯源码。
+        if (tab.markdown.length > MAX_WYSIWYG_FILE_SIZE && tab.mode !== 'source') tab.mode = 'source'
+        if (tab.selection && tab.mode !== 'split' && tab.selection.mode !== tab.mode) delete tab.selection
         restored.push(tab)
       }
       this.tabs = restored
@@ -148,7 +149,8 @@ export const useTabsStore = defineStore('tabs', {
 
     updateTabSelection(id: string, selection: EditorSelectionState): void {
       const tab = this.tabs.find((t) => t.id === id)
-      if (!tab || tab.loading || selection.mode !== tab.mode) return
+      // 分屏页签的光标属于其中一个面板；其余模式必须与页签模式同坐标系。
+      if (!tab || tab.loading || (tab.mode !== 'split' && selection.mode !== tab.mode)) return
       const previous = tab.selection
       if (previous?.mode === selection.mode && previous.anchor === selection.anchor && previous.head === selection.head) return
       tab.selection = { ...selection }
@@ -347,7 +349,8 @@ export const useTabsStore = defineStore('tabs', {
     toggleMode(id: string): void {
       const tab = this.tabs.find((t) => t.id === id)
       if (!tab) return
-      tab.mode = tab.mode === 'wysiwyg' ? 'source' : 'wysiwyg'
+      // 所见即所得 → 源码 → 分屏 → 所见即所得；切换后坐标系不可换算，光标作废。
+      tab.mode = tab.mode === 'wysiwyg' ? 'source' : tab.mode === 'source' ? 'split' : 'wysiwyg'
       delete tab.selection
     },
 

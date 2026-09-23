@@ -28,7 +28,7 @@ export default {
     selectAll: 'Select All',
     closeTab: 'Close Tab',
     view: 'View',
-    toggleMode: 'Toggle Source/WYSIWYG Mode',
+    toggleMode: 'Cycle Editor Mode (WYSIWYG / Source / Split)',
     toggleSidebar: 'Toggle Sidebar',
     toggleOutline: 'Toggle Outline Panel',
     toggleTheme: 'Toggle Dark/Light Theme',
@@ -79,7 +79,8 @@ export default {
     charCount: '{count} chars',
     sourceMode: 'Source Mode',
     wysiwygMode: 'WYSIWYG',
-    toggleModeHint: 'Click to toggle Source / WYSIWYG mode',
+    splitMode: 'Split Mode',
+    toggleModeHint: 'Click to cycle WYSIWYG / Source / Split mode',
     toggleTheme: 'Toggle theme (F11)',
     dark: '🌙 Dark',
     light: '☀️ Light'
@@ -96,13 +97,13 @@ export default {
   },
   welcome: {
     subtitle: 'K Markdown Editor',
-    hint: 'WYSIWYG · Source Mode · File Association',
+    hint: 'WYSIWYG · Source Mode · Split View · File Association',
     openFile: 'Open File',
     openFolder: 'Open Folder',
     newFile: 'New File',
     resumeWorkspace: 'Resume Last Workspace',
     tip1: 'Tip: After installing, double-click .md files to open them with KMDE',
-    tip2: 'Ctrl+P Quick Open · Ctrl+/ Toggle Source Mode · Ctrl+Shift+P Command Palette',
+    tip2: 'Ctrl+P Quick Open · Ctrl+/ Cycle Editor Mode · Ctrl+Shift+P Command Palette',
     tip3: 'You can also drag .md files directly into the window'
   },
   tabbar: {
@@ -243,7 +244,7 @@ export default {
     save: 'Save',
     saveAs: 'Save As…',
     export: 'Export HTML / PDF…',
-    toggleMode: 'Toggle Source / WYSIWYG Mode',
+    toggleMode: 'Cycle Editor Mode (WYSIWYG / Source / Split)',
     toggleSidebar: 'Show / Hide Sidebar',
     toggleOutline: 'Show / Hide Outline Panel',
     toggleTheme: 'Toggle Light / Dark Theme',

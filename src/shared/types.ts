@@ -30,7 +30,7 @@ export const APP_LOCALES: AppLocale[] = ['zh-CN', 'en-US']
 export interface AppSettings {
   theme: 'light' | 'dark'
   fontSize: number
-  defaultMode: 'wysiwyg' | 'source'
+  defaultMode: EditorMode
   sidebarVisible: boolean
   outlineVisible: boolean
   sidebarWidth: number
@@ -59,10 +59,13 @@ export interface OutlineItem {
   line?: number
 }
 
-export type EditorMode = 'wysiwyg' | 'source'
+export type EditorMode = 'wysiwyg' | 'source' | 'split'
+
+/** 单侧编辑面板的坐标系；分屏模式下左右面板各属其一，光标坐标不能互换。 */
+export type EditorPaneMode = 'wysiwyg' | 'source'
 
 export interface EditorSelectionState {
-  mode: EditorMode
+  mode: EditorPaneMode
   anchor: number
   head: number
 }

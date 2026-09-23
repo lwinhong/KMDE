@@ -4,6 +4,7 @@ import type { EditorSelectionState, OutlineItem } from '@shared/types'
 import { useTabsStore, type EditorTab } from '../../stores/tabs.store'
 import TiptapEditor from './tiptap/TiptapEditor.vue'
 import SourceEditor from './source/SourceEditor.vue'
+import SplitEditor from './SplitEditor.vue'
 import SearchReplaceBar from './SearchReplaceBar.vue'
 
 const props = defineProps<{ locked: boolean }>()
@@ -118,7 +119,8 @@ function onEditorOutline(tab: EditorTab, items: OutlineItem[], activeId: string 
 
 const searchBarRef = ref<InstanceType<typeof SearchReplaceBar> | null>(null)
 const searchVisible = ref(false)
-const searchOffsetTop = computed(() => (tabs.activeTab?.mode === 'wysiwyg' ? 48 : 8))
+// 分屏左侧同样有 40px 工具栏，搜索条定位与所见即所得一致。
+const searchOffsetTop = computed(() => (tabs.activeTab?.mode === 'source' ? 8 : 48))
 const searchTotal = ref(0)
 const searchCurrent = ref(0)
 
@@ -218,8 +220,18 @@ defineExpose({ flushActive, flushTab, flushAll, jumpTo, focusActive })
         @outline-change="(items: OutlineItem[], activeId: string | null) => onEditorOutline(tab, items, activeId)"
         @toggle-mode="onToggleMode"
       />
+      <SplitEditor
+        v-else-if="!tab.loading && tab.mode === 'split'"
+        v-show="tab.id === tabs.activeTabId"
+        :ref="(el) => setEditorRef(tab.id, el as EditorInstance | null)"
+        :tab="tab"
+        :locked="locked"
+        @update="(md: string) => onEditorUpdate(tab, md)"
+        @outline-change="(items: OutlineItem[], activeId: string | null) => onEditorOutline(tab, items, activeId)"
+        @toggle-mode="onToggleMode"
+      />
       <SourceEditor
-        v-else-if="!tab.loading && tab.mode !== 'wysiwyg'"
+        v-else-if="!tab.loading && tab.mode === 'source'"
         v-show="tab.id === tabs.activeTabId"
         :ref="(el) => setEditorRef(tab.id, el as EditorInstance | null)"
         :tab="tab"
