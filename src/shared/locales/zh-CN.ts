@@ -95,7 +95,9 @@ export default {
     deleted: '(已删除)',
     newFile: '新建文件 (Ctrl+N)',
     openFile: '打开文件 (Ctrl+O)',
-    openFolder: '打开文件夹 (Ctrl+Shift+O)'
+    openFolder: '打开文件夹 (Ctrl+Shift+O)',
+    scrollLeft: '向左滚动',
+    scrollRight: '向右滚动'
   },
   sidebar: {
     explorer: '资源管理器',
@@ -199,7 +201,8 @@ export default {
     saveBeforeExport: '请先保存文件后再导出',
     unsavedCloseConfirm: '「{name}」有未保存的修改，是否保存并关闭？',
     fileReloaded: '「{name}」已在磁盘上被修改，已重新加载',
-    fileLoading: '文件正在加载，请稍后再试'
+    fileLoading: '文件正在加载，请稍后再试',
+    tabLimitReached: '页签已达上限（{limit} 个），请先关闭部分页签'
   },
   palette: {
     newFile: '新建文件',

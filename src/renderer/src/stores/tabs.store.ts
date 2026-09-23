@@ -27,6 +27,8 @@ export interface TabConflict {
 
 let tabSeq = 0
 
+export const MAX_TABS = 12
+
 export const useTabsStore = defineStore('tabs', {
   state: () => ({
     tabs: [] as EditorTab[],
@@ -64,6 +66,7 @@ export const useTabsStore = defineStore('tabs', {
         }
         return existing
       }
+      if (this.tabs.length >= MAX_TABS) return null
       // two-phase open: mount the tab immediately with a skeleton, fill content once read
       const tab: EditorTab = {
         id: `tab-${++tabSeq}`,
@@ -116,7 +119,8 @@ export const useTabsStore = defineStore('tabs', {
       }
     },
 
-    newUntitled(): EditorTab {
+    newUntitled(): EditorTab | null {
+      if (this.tabs.length >= MAX_TABS) return null
       const settings = useSettingsStore()
       const tab: EditorTab = {
         id: `tab-${++tabSeq}`,

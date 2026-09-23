@@ -1,17 +1,69 @@
 <script setup lang="ts">
+import { ref, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import { useTabsStore } from '../../stores/tabs.store'
 import { useWorkspaceStore } from '../../stores/workspace.store'
 import { MarkdownIcon } from '../editor/tiptap/icons/index.jsx'
 
 const emit = defineEmits<{
-  (e: 'open-file'): void
-  (e: 'open-folder'): void
   (e: 'new-file'): void
   (e: 'close-tab', id: string): void
 }>()
 
 const tabs = useTabsStore()
 const workspace = useWorkspaceStore()
+
+const scrollRef = ref<HTMLElement | null>(null)
+const canScrollLeft = ref(false)
+const canScrollRight = ref(false)
+
+function updateScrollState(): void {
+  const el = scrollRef.value
+  if (!el) return
+  canScrollLeft.value = el.scrollLeft > 0
+  canScrollRight.value = el.scrollLeft + el.clientWidth < el.scrollWidth - 1
+}
+
+function onWheel(e: WheelEvent): void {
+  const el = scrollRef.value
+  if (!el) return
+  const delta = e.deltaY || e.deltaX
+  if (delta === 0) return
+  e.preventDefault()
+  el.scrollLeft += delta
+  updateScrollState()
+}
+
+function scrollBy(delta: number): void {
+  scrollRef.value?.scrollBy({ left: delta, behavior: 'smooth' })
+}
+
+let resizeObserver: ResizeObserver | null = null
+
+onMounted(() => {
+  const el = scrollRef.value
+  if (!el) return
+  el.addEventListener('wheel', onWheel, { passive: false })
+  el.addEventListener('scroll', updateScrollState, { passive: true })
+  resizeObserver = new ResizeObserver(updateScrollState)
+  resizeObserver.observe(el)
+  updateScrollState()
+})
+
+onBeforeUnmount(() => {
+  const el = scrollRef.value
+  if (el) {
+    el.removeEventListener('wheel', onWheel)
+    el.removeEventListener('scroll', updateScrollState)
+  }
+  resizeObserver?.disconnect()
+})
+
+watch(
+  () => tabs.tabs.length,
+  () => {
+    nextTick(updateScrollState)
+  }
+)
 
 function onTabClick(id: string): void {
   tabs.activateTab(id)
@@ -32,7 +84,17 @@ function onAuxClick(e: MouseEvent, id: string): void {
 
 <template>
   <div class="tabbar">
-    <div class="tabbar-tabs" role="tablist">
+    <div class="tabbar-tabs" ref="scrollRef" role="tablist">
+      <button
+        v-if="canScrollLeft"
+        class="tabbar-arrow tabbar-arrow-left"
+        :title="$t('tabbar.scrollLeft')"
+        @click="scrollBy(-200)"
+      >
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M15 18l-6-6 6-6" />
+        </svg>
+      </button>
       <div
         v-for="tab in tabs.tabs"
         :key="tab.id"
@@ -55,24 +117,23 @@ function onAuxClick(e: MouseEvent, id: string): void {
           </svg>
         </button>
       </div>
-    </div>
-    <div class="tabbar-actions">
-      <button class="tabbar-action-btn" :title="$t('tabbar.newFile')" @click="emit('new-file')">
-        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M12 5v14M5 12h14" />
-        </svg>
-      </button>
-      <button class="tabbar-action-btn" :title="$t('tabbar.openFile')" @click="emit('open-file')">
-        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M3 7c0-1.1.9-2 2-2h4l2 2h8c1.1 0 2 .9 2 2v8c0 1.1-.9 2-2 2H5c-1.1 0-2-.9-2-2V7z" />
-        </svg>
-      </button>
-      <button class="tabbar-action-btn" :title="$t('tabbar.openFolder')" @click="emit('open-folder')">
-        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v1H3V7z" />
-          <path d="M3 10h18l-2 9a2 2 0 0 1-2 1.6H7a2 2 0 0 1-2-1.6L3 10z" />
-        </svg>
-      </button>
+      <div class="tabbar-edge-right">
+        <button
+          v-if="canScrollRight"
+          class="tabbar-arrow tabbar-arrow-right"
+          :title="$t('tabbar.scrollRight')"
+          @click="scrollBy(200)"
+        >
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 18l6-6-6-6" />
+          </svg>
+        </button>
+        <button class="tabbar-new-btn" :title="$t('tabbar.newFile')" @click="emit('new-file')">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+        </button>
+      </div>
     </div>
   </div>
 </template>
@@ -200,30 +261,71 @@ function onAuxClick(e: MouseEvent, id: string): void {
   color: var(--kme-text-1);
 }
 
-.tabbar-actions {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  padding: 0 8px;
-  flex-shrink: 0;
-}
-
-.tabbar-action-btn {
+.tabbar-new-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 28px;
   height: 28px;
+  margin: 5px 3px;
   border: none;
   border-radius: var(--kme-radius-md);
   background: transparent;
   color: var(--kme-text-2);
   cursor: pointer;
+  flex-shrink: 0;
   transition: background 0.15s, color 0.15s;
 }
 
-.tabbar-action-btn:hover {
-  background: var(--kme-bg-active);
+.tabbar-new-btn:hover {
+  background: var(--kme-bg-hover);
   color: var(--kme-text-1);
+}
+
+.tabbar-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 28px;
+  margin: 5px 0;
+  border: none;
+  background: var(--kme-tabbar-bg);
+  color: var(--kme-text-2);
+  cursor: pointer;
+  flex-shrink: 0;
+  z-index: 2;
+  transition: background 0.15s, color 0.15s;
+}
+
+.tabbar-arrow-left {
+  position: sticky;
+  left: 0;
+}
+
+.tabbar-arrow:hover {
+  background: var(--kme-bg-hover);
+  color: var(--kme-text-1);
+}
+
+.tabbar-edge-right {
+  position: sticky;
+  right: 0;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  background: var(--kme-tabbar-bg);
+  z-index: 2;
+}
+
+.tabbar-edge-right::before {
+  content: '';
+  position: absolute;
+  right: 100%;
+  top: 0;
+  bottom: 0;
+  width: 12px;
+  background: linear-gradient(to right, transparent, var(--kme-tabbar-bg));
+  pointer-events: none;
 }
 </style>

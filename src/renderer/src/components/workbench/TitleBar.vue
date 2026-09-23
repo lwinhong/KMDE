@@ -179,6 +179,31 @@ function onMenuSelect(key: string | number): void {
 
     <div class="title-bar-title" :title="title">{{ title }}</div>
 
+    <div class="title-bar-toggles">
+      <button
+        class="title-bar-toggle"
+        :class="{ active: settings.sidebarVisible }"
+        :title="settings.sidebarVisible ? t('sidebar.collapse') : t('sidebar.expand')"
+        @click="settings.toggleSidebar()"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+          <rect x="3" y="5" width="18" height="14" rx="1.5" />
+          <line x1="9" y1="5" x2="9" y2="19" />
+        </svg>
+      </button>
+      <button
+        class="title-bar-toggle"
+        :class="{ active: settings.outlineVisible }"
+        :title="settings.outlineVisible ? t('outline.collapse') : t('outline.expand')"
+        @click="settings.toggleOutline()"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+          <rect x="3" y="5" width="18" height="14" rx="1.5" />
+          <line x1="15" y1="5" x2="15" y2="19" />
+        </svg>
+      </button>
+    </div>
+
     <div class="title-bar-controls">
       <button class="title-bar-ctl" :title="$t('workbench.minimize')" @click="minimize">
         <svg width="12" height="12" viewBox="0 0 11 11"><path d="M1 5.5 h9" stroke="currentColor" stroke-width="1" /></svg>
@@ -275,6 +300,51 @@ function onMenuSelect(key: string | number): void {
   display: flex;
   align-items: stretch;
   -webkit-app-region: no-drag;
+}
+
+.title-bar-toggles {
+  display: flex;
+  align-items: stretch;
+  padding-right: 8px;
+  margin-right: 8px;
+  -webkit-app-region: no-drag;
+  position: relative;
+}
+
+.title-bar-toggles::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1px;
+  height: 16px;
+  background: var(--kme-border-light);
+}
+
+.title-bar-toggle {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--kme-text-2);
+  width: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: default;
+  border-radius: var(--kme-radius-sm);
+  margin: 4px 1px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.title-bar-toggle:hover {
+  background: var(--kme-bg-hover);
+  color: var(--kme-text-1);
+}
+
+.title-bar-toggle.active {
+  color: var(--kme-text-1);
+  background: var(--kme-bg-hover);
 }
 
 .title-bar-ctl {

@@ -3,7 +3,7 @@ import { computed, onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import { useMessage } from 'naive-ui'
 import { useI18n } from 'vue-i18n'
 import { useSettingsStore } from '../../stores/settings.store'
-import { useTabsStore } from '../../stores/tabs.store'
+import { useTabsStore, MAX_TABS } from '../../stores/tabs.store'
 import { useWorkspaceStore } from '../../stores/workspace.store'
 import type { MenuCommand, FsEvent, OutlineItem } from '@shared/types'
 import type { EditorTab } from '../../stores/tabs.store'
@@ -67,7 +67,10 @@ function runPaletteCommand(id: string): void {
 
 async function openFileByPath(path: string): Promise<void> {
   try {
-    await tabs.openPath(path)
+    const result = await tabs.openPath(path)
+    if (!result) {
+      message.warning(t('notify.tabLimitReached', { limit: MAX_TABS }))
+    }
   } catch (err) {
     message.error(t('notify.openFileFailed', { msg: err instanceof Error ? err.message : String(err) }))
   }
@@ -102,7 +105,10 @@ async function openLastWorkspace(): Promise<void> {
 }
 
 async function newFile(): Promise<void> {
-  tabs.newUntitled()
+  const result = tabs.newUntitled()
+  if (!result) {
+    message.warning(t('notify.tabLimitReached', { limit: MAX_TABS }))
+  }
 }
 
 // ---------------- command dispatch ----------------
@@ -335,22 +341,10 @@ function onOutlineResize(delta: number): void {
     <TitleBar @command="runCommand" @request-close="requestCloseApp" />
     <TabBar
       v-if="tabs.activeTab"
-      @open-file="openFilePicker"
-      @open-folder="openFolderPicker"
       @new-file="newFile()"
       @close-tab="closeTab"
     />
     <div class="workbench-main">
-      <div
-        v-if="!settings.sidebarVisible"
-        class="panel-edge edge-left"
-        :title="t('sidebar.expand')"
-        @click="settings.toggleSidebar()"
-      >
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M9 18l6-6-6-6" />
-        </svg>
-      </div>
       <FileTree v-if="settings.sidebarVisible" @open-file="openFileByPath" />
       <Resizer
         v-if="settings.sidebarVisible"
@@ -384,16 +378,6 @@ function onOutlineResize(delta: number): void {
         :active-id="outlineActiveId"
         @jump="handleOutlineJump"
       />
-      <div
-        v-if="!settings.outlineVisible && tabs.activeTab"
-        class="panel-edge edge-right"
-        :title="t('outline.expand')"
-        @click="settings.toggleOutline()"
-      >
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M15 18l-6-6 6-6" />
-        </svg>
-      </div>
     </div>
     <StatusBar />
     <CommandPalette ref="paletteRef" :commands="paletteCommands" @run-command="runPaletteCommand" @open-file="openFileByPath" />
@@ -417,30 +401,5 @@ function onOutlineResize(delta: number): void {
   display: flex;
   min-height: 0;
   overflow: hidden;
-}
-
-.panel-edge {
-  width: 28px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--kme-bg-sidebar);
-  color: var(--kme-text-3);
-  cursor: pointer;
-  user-select: none;
-}
-
-.panel-edge.edge-left {
-  border-right: 1px solid var(--kme-border-light);
-}
-
-.panel-edge.edge-right {
-  border-left: 1px solid var(--kme-border-light);
-}
-
-.panel-edge:hover {
-  background: var(--kme-bg-hover);
-  color: var(--kme-text-1);
 }
 </style>

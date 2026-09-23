@@ -97,7 +97,9 @@ export default {
     deleted: '(deleted)',
     newFile: 'New File (Ctrl+N)',
     openFile: 'Open File (Ctrl+O)',
-    openFolder: 'Open Folder (Ctrl+Shift+O)'
+    openFolder: 'Open Folder (Ctrl+Shift+O)',
+    scrollLeft: 'Scroll left',
+    scrollRight: 'Scroll right'
   },
   sidebar: {
     explorer: 'Explorer',
@@ -201,7 +203,8 @@ export default {
     saveBeforeExport: 'Save the file before exporting',
     unsavedCloseConfirm: '"{name}" has unsaved changes. Save and close it?',
     fileReloaded: '"{name}" was modified on disk and has been reloaded',
-    fileLoading: 'File is still loading, please try again shortly'
+    fileLoading: 'File is still loading, please try again shortly',
+    tabLimitReached: 'Tab limit reached ({limit}). Please close some tabs first.'
   },
   palette: {
     newFile: 'New File',
