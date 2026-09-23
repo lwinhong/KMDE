@@ -79,9 +79,20 @@ export default {
     charCount: '{count} chars',
     sourceMode: 'Source Mode',
     wysiwygMode: 'WYSIWYG',
+    toggleModeHint: 'Click to toggle Source / WYSIWYG mode',
     toggleTheme: 'Toggle theme (F11)',
     dark: '🌙 Dark',
     light: '☀️ Light'
+  },
+  search: {
+    findPlaceholder: 'Find',
+    replacePlaceholder: 'Replace with',
+    prev: 'Previous (Shift+Enter)',
+    next: 'Next (Enter)',
+    caseSensitive: 'Match case',
+    toggleReplace: 'Toggle Replace',
+    replace: 'Replace',
+    replaceAll: 'Replace All'
   },
   welcome: {
     subtitle: 'K Markdown Editor',
@@ -100,10 +111,20 @@ export default {
     openFile: 'Open File (Ctrl+O)',
     openFolder: 'Open Folder (Ctrl+Shift+O)',
     scrollLeft: 'Scroll left',
-    scrollRight: 'Scroll right'
+    scrollRight: 'Scroll right',
+    contextClose: 'Close',
+    contextCloseOthers: 'Close Others',
+    contextCloseLeft: 'Close to the Left',
+    contextCloseRight: 'Close to the Right',
+    contextCloseAll: 'Close All',
+    contextReveal: 'Reveal in File Explorer'
   },
   sidebar: {
     explorer: 'Explorer',
+    closeWorkspace: 'Close Workspace',
+    loading: 'Loading directory…',
+    indexing: 'Indexing in background…',
+    loadMore: 'Load more',
     newFile: 'New File',
     newFolder: 'New Folder',
     removeToTrash: 'Delete (Move to Trash)',
@@ -200,6 +221,9 @@ export default {
     openFileFailed: 'Failed to open file: {msg}',
     openFolderFailed: 'Failed to open folder: {msg}',
     restoreWorkspaceFailed: 'Could not restore the last workspace',
+    closeWorkspaceFailed: 'Could not close the workspace or save its state. Please retry: {msg}',
+    fileWatchFailed: 'Could not watch file changes. Reopen the files or restart the app.',
+    draftCleanupPending: 'Session saved, but temporary file cleanup failed. Cleanup will retry automatically; check folder permissions.',
     sessionRestoreFailed: 'Could not read the last session. Original data has been preserved. Check the app data permissions and session file, then restart.',
     sessionSaveFailed: 'Could not save drafts or session. Do not force quit; check disk space and permissions, then retry.',
     saveFailed: 'Save failed',
@@ -209,7 +233,8 @@ export default {
     unsavedCloseConfirm: '"{name}" has unsaved changes. Save and close it?',
     fileReloaded: '"{name}" was modified on disk and has been reloaded',
     fileLoading: 'File is still loading, please try again shortly',
-    tabLimitReached: 'Tab limit reached ({limit}). Please close some tabs first.'
+    tabLimitReached: 'Tab limit reached ({limit}). Please close some tabs first.',
+    revealFailed: 'Failed to reveal in File Explorer'
   },
   palette: {
     newFile: 'New File',

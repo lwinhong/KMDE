@@ -33,6 +33,7 @@ export function createAppMenu(): void {
         { type: 'separator' },
         cmd('open-file', t('menu.openFile'), 'CmdOrCtrl+O'),
         cmd('open-folder', t('menu.openFolder'), 'CmdOrCtrl+Shift+O'),
+        cmd('close-folder', t('sidebar.closeWorkspace')),
         { type: 'separator' },
         cmd('save', t('menu.save'), 'CmdOrCtrl+S'),
         cmd('save-as', t('menu.saveAs'), 'CmdOrCtrl+Shift+S'),

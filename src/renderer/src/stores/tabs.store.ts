@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { basename, dirname, extname } from './pathUtils'
 import { MAX_WYSIWYG_FILE_SIZE } from '@shared/types'
-import type { EditorMode, EditorSession, SessionTab } from '@shared/types'
+import type { EditorMode, EditorSession, SessionSaveOptions, SessionTab } from '@shared/types'
 import { useSettingsStore } from './settings.store'
 import { t } from '@/i18n'
 
@@ -19,6 +19,14 @@ export interface TabConflict {
 
 type SaveResult = 'saved' | 'need-path' | 'error' | 'loading'
 const pendingSaves = new Map<string, Promise<SaveResult>>()
+const sessionQueues = new WeakMap<object, Promise<void>>()
+
+// 在执行时捕获快照，让关闭、身份转换与周期保存共享提交顺序。
+function enqueueSession<T>(store: object, action: () => Promise<T>): Promise<T> {
+  const result = (sessionQueues.get(store) ?? Promise.resolve()).then(action)
+  sessionQueues.set(store, result.then(() => undefined, () => undefined))
+  return result
+}
 
 function pathKey(path: string): string {
   return path.replace(/\\/g, '/').toLowerCase()
@@ -35,7 +43,8 @@ export const useTabsStore = defineStore('tabs', {
     saving: false,
     untitledSeq: 0,
     sessionReady: false,
-    sessionError: false
+    sessionError: false,
+    cleanupPending: false
   }),
   getters: {
     activeTab(state): EditorTab | null {
@@ -58,10 +67,15 @@ export const useTabsStore = defineStore('tabs', {
       }
     },
 
-    async persistSession(): Promise<boolean> {
+    persistSession(): Promise<boolean> {
+      return enqueueSession(this, () => this.commitSession(this.sessionSnapshot()))
+    },
+
+    async commitSession(snapshot: EditorSession, options?: SessionSaveOptions): Promise<boolean> {
       if (!this.sessionReady) return false
       try {
-        await window.kmde.saveSession(this.sessionSnapshot())
+        const result = await window.kmde.saveSession(snapshot, options)
+        this.cleanupPending = result.cleanupPending
         this.sessionError = false
         return true
       } catch (error) {
@@ -231,6 +245,24 @@ export const useTabsStore = defineStore('tabs', {
       if (this.conflict?.tabId === id) this.conflict = this.conflictQueue.shift() ?? null
     },
 
+    closePersistedTab(id: string): Promise<boolean> {
+      return enqueueSession(this, async () => {
+        const tab = this.tabs.find((item) => item.id === id)
+        if (!tab || !this.sessionReady) return false
+        const snapshot = this.sessionSnapshot()
+        const index = snapshot.tabs.findIndex((item) => item.id === id)
+        snapshot.tabs = snapshot.tabs.filter((item) => item.id !== id)
+        if (snapshot.activeTabId === id) {
+          snapshot.activeTabId = snapshot.tabs[Math.min(index, snapshot.tabs.length - 1)]?.id ?? null
+        }
+        const options = tab.path === null ? { discardDraftIds: [id] } : undefined
+        // 先提交候选会话；失败时保留标签、内容与活动状态供重试。
+        if (!await this.commitSession(snapshot, options)) return false
+        this.removeTab(id)
+        return true
+      })
+    },
+
     saveTab(id: string): Promise<SaveResult> {
       return this.queueSave(id)
     },
@@ -241,7 +273,7 @@ export const useTabsStore = defineStore('tabs', {
 
     queueSave(id: string, targetPath?: string): Promise<SaveResult> {
       const previous = pendingSaves.get(id) ?? Promise.resolve()
-      const operation = previous.then(async (): Promise<SaveResult> => {
+      const operation = previous.then(() => enqueueSession(this, async (): Promise<SaveResult> => {
         const tab = this.tabs.find((item) => item.id === id)
         if (!tab) return 'error'
         if (tab.loading) return 'loading'
@@ -260,7 +292,7 @@ export const useTabsStore = defineStore('tabs', {
           tab.deleted = false
           tab.savedMtimeMs = mtimeMs
           // 会话引用提交成功后，主进程才清理对应草稿。
-          if (await this.persistSession()) return 'saved'
+          if (await this.commitSession(this.sessionSnapshot())) return 'saved'
           if (targetPath) {
             Object.assign(tab, identity)
             tab.dirty = true
@@ -270,7 +302,7 @@ export const useTabsStore = defineStore('tabs', {
           console.error('[tabs] 保存失败:', error)
           return 'error'
         }
-      })
+      }))
       pendingSaves.set(id, operation)
       this.saving = true
       void operation.finally(() => {

@@ -10,6 +10,10 @@ const tabs = useTabsStore()
 const workspace = useWorkspaceStore()
 const { t } = useI18n()
 
+const emit = defineEmits<{
+  (e: 'toggle-mode'): void
+}>()
+
 const charCount = computed(() => {
   const tab = tabs.activeTab
   if (!tab) return 0
@@ -34,7 +38,15 @@ const modeLabel = computed(() => (tabs.activeTab?.mode === 'source' ? t('statusb
     </div>
     <div class="statusbar-right">
       <span v-if="tabs.activeTab" class="statusbar-item">{{ $t('statusbar.charCount', { count: charCount }) }}</span>
-      <span v-if="tabs.activeTab" class="statusbar-item">{{ modeLabel }}</span>
+      <button
+        v-if="tabs.activeTab"
+        class="statusbar-btn"
+        :disabled="tabs.activeTab.loading"
+        :title="$t('statusbar.toggleModeHint')"
+        @click="emit('toggle-mode')"
+      >
+        {{ modeLabel }}
+      </button>
       <button class="statusbar-btn" :title="$t('statusbar.toggleTheme')" @click="settings.toggleTheme()">
         {{ settings.isDark ? $t('statusbar.dark') : $t('statusbar.light') }}
       </button>
@@ -91,5 +103,15 @@ const modeLabel = computed(() => (tabs.activeTab?.mode === 'source' ? t('statusb
 .statusbar-btn:hover {
   background: var(--kme-bg-hover);
   color: var(--kme-text-1);
+}
+
+.statusbar-btn:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.statusbar-btn:disabled:hover {
+  background: transparent;
+  color: var(--kme-text-3);
 }
 </style>

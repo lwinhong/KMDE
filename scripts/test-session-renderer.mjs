@@ -9,7 +9,9 @@ import { build } from 'vite'
 const root = fileURLToPath(new URL('../', import.meta.url))
 const suites = {
   store: 'src/renderer/src/stores/tabs.store.test.ts',
-  persistence: 'src/renderer/src/composables/useDocumentPersistence.test.ts'
+  persistence: 'src/renderer/src/composables/useDocumentPersistence.test.ts',
+  workspace: 'src/renderer/src/stores/workspace.store.test.ts',
+  tree: 'src/renderer/src/composables/useFileTree.test.ts'
 }
 const selected = process.argv.slice(2)
 if (selected.some((name) => !Object.hasOwn(suites, name))) {

@@ -5,7 +5,7 @@ import type { TestContext } from 'node:test'
 import { setImmediate as nextTurn } from 'node:timers/promises'
 import { createPinia, disposePinia, setActivePinia } from 'pinia'
 import type { KmdeApi } from '../../../preload'
-import type { EditorSession, ReadFileResult, SessionTab } from '@shared/types'
+import type { EditorSession, ReadFileResult, SessionSaveOptions, SessionSaveResult, SessionTab } from '@shared/types'
 import { i18n } from '../i18n'
 import { useTabsStore } from './tabs.store'
 
@@ -39,9 +39,10 @@ function fixture(t: TestContext, initial: EditorSession | null = null) {
   const writes: Array<{ path: string; content: string }> = []
   const api = {
     loadSession: t.mock.fn(async () => clone(saved)),
-    saveSession: t.mock.fn(async (session: EditorSession): Promise<void> => {
+    saveSession: t.mock.fn(async (session: EditorSession, _options?: SessionSaveOptions): Promise<SessionSaveResult> => {
       saved = clone(session)
       commits.push(clone(session))
+      return { cleanupPending: false }
     }),
     readFile: t.mock.fn(async (path: string): Promise<ReadFileResult> => {
       const file = disk.get(windowsKey(path))
@@ -108,7 +109,7 @@ describe('会话恢复与标签保存契约', { concurrency: false, timeout: 500
     })
     store.updateTabContent(created[0].id, '重启前的草稿')
     // 关闭编号最大的草稿后，序号仍必须持久化，而不是从剩余标签数量推导。
-    store.removeTab(created[3].id)
+    assert.equal(await store.closePersistedTab(created[3].id), true)
     assert.equal(await store.persistSession(), true)
     assert.equal(commits.at(-1)!.untitledSeq, 4)
     const restarted = newStore()
@@ -282,7 +283,9 @@ describe('会话恢复与标签保存契约', { concurrency: false, timeout: 500
       release.resolve({ content: '读取完成', mtimeMs: 3 })
       await restoring
     }
-    assert.equal(store.conflict?.tabId, first.id)
+    assert.deepEqual(store.conflict, {
+      tabId: first.id, path: first.path, diskContent: '应保留的磁盘内容', mtimeMs: 2
+    })
     store.resolveConflict('load-disk')
     assert.equal(store.tabs[0].markdown, '应保留的磁盘内容')
     assert.equal(store.tabs[0].dirty, false)
@@ -456,25 +459,327 @@ describe('会话恢复与标签保存契约', { concurrency: false, timeout: 500
     assert.equal(api.writeFile.mock.callCount(), 0)
   })
 
-  test('关闭标签后快照剔除，活动标签有效，不依赖任何删除 API', async (t) => {
+  test('新建空草稿也正常备份并恢复，不能因内容为空而丢弃', async (t) => {
+    const { store, api, commits, newStore } = fixture(t)
+    await store.restoreSession()
+    const draft = store.newUntitled()!
+    const before = store.sessionSnapshot()
+    assert.equal(await store.persistSession(), true)
+    assert.deepEqual(commits, [before])
+    assert.equal(commits[0].tabs[0].markdown, '')
+    assert.equal(commits[0].tabs[0].path, null)
+    assert.equal(api.saveSession.mock.calls[0].arguments[1], undefined)
+    const restarted = newStore()
+    await restarted.restoreSession()
+    assert.deepEqual(restarted.sessionSnapshot(), before)
+    assert.equal(restarted.activeTabId, draft.id)
+    assert.equal(api.writeFile.mock.callCount(), 0)
+    assert.equal(api.saveAsDialog.mock.callCount(), 0)
+  })
+
+  test('显式关闭只 discard 目标草稿，候选提交成功之前不移除标签', async (t) => {
     const { store, commits, newStore, api } = fixture(t)
     await store.restoreSession()
     const first = store.newUntitled()!
-    const second = store.newUntitled()!
-    store.updateTabContent(second.id, '关闭前保全')
+    const target = store.newUntitled()!
+    const last = store.newUntitled()!
+    store.updateTabContent(first.id, '保留首篇')
+    store.updateTabContent(target.id, '仅丢弃这一篇')
+    store.updateTabContent(last.id, '保留末篇')
+    store.activateTab(target.id)
     assert.equal(await store.persistSession(), true)
-    store.removeTab(second.id)
-    assert.equal(await store.persistSession(), true)
-    assert.deepEqual(commits.at(-1)!.tabs.map((tab) => tab.id), [first.id])
-    assert.equal(commits.at(-1)!.activeTabId, first.id)
-    assert.equal(commits[0].tabs[1].markdown, '关闭前保全')
+    const before = store.sessionSnapshot()
+    const release = deferred<void>()
+    const save = api.saveSession
+    const blocked = t.mock.method(api, 'saveSession', async (snapshot: EditorSession, options?: SessionSaveOptions) => {
+      await release.promise
+      return save(snapshot, options)
+    })
+    const closing = store.closePersistedTab(target.id)
+    try {
+      await nextTurn()
+      assert.equal(blocked.mock.callCount(), 1)
+      const [candidate, options] = blocked.mock.calls[0].arguments
+      assert.deepEqual(candidate, { ...before, tabs: [before.tabs[0], before.tabs[2]], activeTabId: last.id })
+      assert.deepEqual(options, { discardDraftIds: [target.id] })
+      assert.deepEqual(store.sessionSnapshot(), before)
+    } finally {
+      release.resolve()
+      await closing
+    }
+    assert.equal(await closing, true)
+    assert.deepEqual(store.sessionSnapshot(), commits.at(-1))
+    assert.equal(store.activeTabId, last.id)
     const restarted = newStore()
     await restarted.restoreSession()
-    assert.deepEqual(restarted.tabs.map((tab) => tab.id), [first.id])
-    restarted.removeTab(first.id)
-    assert.equal(await restarted.persistSession(), true)
+    assert.deepEqual(restarted.tabs.map((tab) => tab.id), [first.id, last.id])
+    assert.equal(await restarted.closePersistedTab(first.id), true)
+    assert.equal(restarted.activeTabId, last.id, '关闭非活动标签不能改变活动标签')
+    assert.equal(await restarted.closePersistedTab(last.id), true)
     assert.deepEqual(commits.at(-1)!.tabs, [])
     assert.equal(commits.at(-1)!.activeTabId, null)
+    assert.deepEqual(save.mock.calls.map((call) => call.arguments[1]), [
+      undefined, { discardDraftIds: [target.id] }, { discardDraftIds: [first.id] }, { discardDraftIds: [last.id] }
+    ])
     assert.equal(api.writeFile.mock.callCount(), 0)
+  })
+
+  test('关闭提交 reject 保留全部标签、活动标签及内容，之后可以重试', async (t) => {
+    const { store, api, newStore } = fixture(t)
+    await store.restoreSession()
+    store.newUntitled()
+    const target = store.newUntitled()!
+    store.updateTabContent(target.id, '失败后仍可编辑\r\n')
+    store.setMode(target.id, 'source')
+    assert.equal(await store.persistSession(), true)
+    const before = store.sessionSnapshot()
+    const beforeTabs = clone(store.tabs)
+    const failure = t.mock.method(api, 'saveSession', async () => { throw new Error('模拟关闭提交失败') })
+    const errors = t.mock.method(console, 'error', () => {})
+    assert.equal(await store.closePersistedTab(target.id), false)
+    assert.deepEqual(store.sessionSnapshot(), before)
+    assert.deepEqual(clone(store.tabs), beforeTabs)
+    assert.equal(store.activeTabId, target.id)
+    assert.equal(store.sessionError, true)
+    assert.equal(errors.mock.callCount(), 1)
+    const restarted = newStore()
+    await restarted.restoreSession()
+    assert.deepEqual(restarted.sessionSnapshot(), before)
+    failure.mock.restore()
+    assert.equal(await store.closePersistedTab(target.id), true)
+    assert.equal(store.sessionError, false)
+    assert.equal(store.tabs.some((tab) => tab.id === target.id), false)
+    const calls = api.saveSession.mock.callCount()
+    assert.equal(await store.closePersistedTab(target.id), false)
+    assert.equal(api.saveSession.mock.callCount(), calls, '重复关闭不得再次 discard')
+  })
+
+  test('退出用普通 persist 保留所有草稿且无 discard，关闭正式文件也无 discard', async (t) => {
+    const { store, api, diskFile, commits } = fixture(t)
+    await store.restoreSession()
+    const empty = store.newUntitled()!
+    const draft = store.newUntitled()!
+    store.updateTabContent(draft.id, '退出仍保留')
+    const path = 'C:\\笔记\\正式.md'
+    diskFile(path, '正式文件')
+    const file = (await store.openPath(path))!
+    const before = store.sessionSnapshot()
+    assert.equal(await store.persistSession(), true)
+    assert.deepEqual(commits[0], before)
+    assert.equal(await store.closePersistedTab(file.id), true)
+    assert.equal(await store.persistSession(), true)
+    assert.deepEqual(commits.at(-1)!.tabs.map((tab) => tab.id), [empty.id, draft.id])
+    assert.ok(api.saveSession.mock.calls.every((call) => call.arguments[1] === undefined))
+    assert.equal(api.writeFile.mock.callCount(), 0)
+  })
+
+  test('关闭提交已成功但清理 pending 仍关闭成功，普通重试清除 pending 且不重复 discard', async (t) => {
+    const { store, api, commits, newStore } = fixture(t)
+    await store.restoreSession()
+    const keep = store.newUntitled()!
+    const target = store.newUntitled()!
+    const save = api.saveSession
+    const pending = t.mock.method(api, 'saveSession', async (snapshot: EditorSession, options?: SessionSaveOptions) => {
+      await save(snapshot, options)
+      return { cleanupPending: true }
+    })
+    assert.equal(store.cleanupPending, false)
+    assert.equal(await store.closePersistedTab(target.id), true)
+    assert.equal(store.cleanupPending, true)
+    assert.equal(store.sessionError, false)
+    assert.deepEqual(store.tabs.map((tab) => tab.id), [keep.id])
+    assert.equal(store.activeTabId, keep.id)
+    assert.deepEqual(pending.mock.calls[0].arguments[1], { discardDraftIds: [target.id] })
+    const restarted = newStore()
+    await restarted.restoreSession()
+    assert.deepEqual(restarted.tabs.map((tab) => tab.id), [keep.id])
+    pending.mock.restore()
+    assert.equal(await store.persistSession(), true)
+    assert.equal(store.cleanupPending, false)
+    assert.equal(api.saveSession.mock.calls.at(-1)!.arguments[1], undefined)
+    assert.deepEqual(commits.at(-1)!.tabs.map((tab) => tab.id), [keep.id])
+  })
+
+  test('正式保存 resolve cleanupPending 不得回滚已提交文件身份', async (t) => {
+    const { store, api, writes, newStore } = fixture(t)
+    await store.restoreSession()
+    const draft = store.newUntitled()!
+    store.updateTabContent(draft.id, '已正式保存\r\n')
+    const before = store.sessionSnapshot().tabs[0]
+    const path = 'D:\\文档\\正式保存.md'
+    const save = api.saveSession
+    const pending = t.mock.method(api, 'saveSession', async (snapshot: EditorSession, options?: SessionSaveOptions) => {
+      await save(snapshot, options)
+      return { cleanupPending: true }
+    })
+    assert.equal(await store.saveTabAs(draft.id, path), 'saved')
+    assert.deepEqual(writes, [{ path, content: before.markdown }])
+    assert.deepEqual(store.sessionSnapshot().tabs[0], {
+      ...before, path, fileName: '正式保存.md', savedMtimeMs: 101, dirty: false
+    })
+    assert.equal(store.cleanupPending, true)
+    assert.equal(store.sessionError, false)
+    assert.equal(pending.mock.calls[0].arguments[1], undefined)
+    const restarted = newStore()
+    await restarted.restoreSession()
+    assert.deepEqual(restarted.sessionSnapshot(), store.sessionSnapshot())
+    pending.mock.restore()
+    assert.equal(await store.persistSession(), true)
+    assert.equal(store.cleanupPending, false)
+    assert.equal(store.tabs[0].path, path)
+    assert.equal(store.tabs[0].dirty, false)
+  })
+
+  test('延迟普通提交、关闭、后续提交严格串行，排队快照不能复活已关闭草稿', async (t) => {
+    const { store, api, commits, newStore } = fixture(t)
+    await store.restoreSession()
+    const keep = store.newUntitled()!
+    const target = store.newUntitled()!
+    store.updateTabContent(target.id, '关闭前的旧版本')
+    const firstGate = deferred<void>()
+    const closeGate = deferred<void>()
+    const save = api.saveSession
+    const requests: Array<{ snapshot: EditorSession; options?: SessionSaveOptions }> = []
+    let inFlight = 0
+    let maximum = 0
+    t.mock.method(api, 'saveSession', async (snapshot: EditorSession, options?: SessionSaveOptions) => {
+      requests.push({ snapshot: clone(snapshot), options })
+      maximum = Math.max(maximum, ++inFlight)
+      try {
+        if (requests.length === 1) await firstGate.promise
+        else if (requests.length === 2) await closeGate.promise
+        return await save(snapshot, options)
+      } finally {
+        inFlight--
+      }
+    })
+    const first = store.persistSession()
+    let closing: Promise<boolean> | undefined
+    let later: Promise<boolean> | undefined
+    try {
+      await nextTurn()
+      assert.equal(requests.length, 1)
+      closing = store.closePersistedTab(target.id)
+      later = store.persistSession()
+      store.updateTabContent(keep.id, '入队后才输入的最新内容')
+      await nextTurn()
+      assert.equal(requests.length, 1)
+      assert.equal(store.activeTabId, target.id)
+      firstGate.resolve()
+      await nextTurn()
+      assert.equal(requests.length, 2)
+      assert.deepEqual(requests[1].options, { discardDraftIds: [target.id] })
+      assert.deepEqual(requests[1].snapshot.tabs.map((tab) => tab.id), [keep.id])
+      assert.equal(store.tabs.some((tab) => tab.id === target.id), true)
+      assert.equal(commits.length, 1)
+    } finally {
+      firstGate.resolve()
+      closeGate.resolve()
+      await Promise.all([first, closing, later])
+    }
+    assert.deepEqual(await Promise.all([first, closing, later]), [true, true, true])
+    assert.equal(maximum, 1)
+    assert.equal(requests.length, 3)
+    assert.deepEqual(requests.map((request) => request.options), [undefined, { discardDraftIds: [target.id] }, undefined])
+    assert.deepEqual(commits.map((snapshot) => snapshot.tabs.map((tab) => tab.id)), [
+      [keep.id, target.id], [keep.id], [keep.id]
+    ])
+    assert.equal(commits[2].tabs[0].markdown, '入队后才输入的最新内容')
+    assert.equal(commits[2].activeTabId, keep.id)
+    const restarted = newStore()
+    await restarted.restoreSession()
+    assert.deepEqual(restarted.sessionSnapshot(), commits[2])
+  })
+
+  test('并行另存提交失败与另一标签保存、周期提交共享队列，不持久化回滚前身份', async (t) => {
+    const { store, api, commits, writes } = fixture(t)
+    await store.restoreSession()
+    const first = store.newUntitled()!
+    const second = store.newUntitled()!
+    store.updateTabContent(first.id, '首篇草稿必须保留')
+    store.updateTabContent(second.id, '第二篇可成功保存')
+    const before = store.sessionSnapshot().tabs[0]
+    const firstPath = 'D:\\文档\\失败.md'
+    const secondPath = 'D:\\文档\\成功.md'
+    const writeGate = deferred<void>()
+    const commitGate = deferred<void>()
+    const write = api.writeFile
+    const save = api.saveSession
+    const writeCalls = t.mock.method(api, 'writeFile', async (path: string, content: string) => {
+      if (path === firstPath) await writeGate.promise
+      return write(path, content)
+    })
+    const attempts: EditorSession[] = []
+    t.mock.method(api, 'saveSession', async (snapshot: EditorSession, options?: SessionSaveOptions) => {
+      attempts.push(clone(snapshot))
+      if (attempts.length === 1) {
+        await commitGate.promise
+        throw new Error('模拟首篇另存会话提交失败')
+      }
+      return save(snapshot, options)
+    })
+    const errors = t.mock.method(console, 'error', () => {})
+    const firstSave = store.saveTabAs(first.id, firstPath)
+    let secondSave: ReturnType<typeof store.saveTabAs> | undefined
+    let periodic: Promise<boolean> | undefined
+    try {
+      await nextTurn()
+      assert.equal(writeCalls.mock.callCount(), 1)
+      secondSave = store.saveTabAs(second.id, secondPath)
+      await nextTurn()
+      periodic = store.persistSession()
+      store.updateTabContent(first.id, '排队期间继续输入')
+      await nextTurn()
+      assert.equal(writeCalls.mock.callCount(), 1, '另一标签的 write 也必须等待前一保存事务')
+      assert.equal(attempts.length, 0, '写文件未完成时周期提交不能绕过事务')
+      writeGate.resolve()
+      await nextTurn()
+      assert.equal(attempts.length, 1)
+      assert.equal(attempts[0].tabs[0].path, firstPath)
+      assert.equal(writeCalls.mock.callCount(), 1, 'commit 未完成时不得开始下一次 write')
+    } finally {
+      writeGate.resolve()
+      commitGate.resolve()
+      await Promise.all([firstSave, secondSave, periodic])
+    }
+    assert.deepEqual(await Promise.all([firstSave, secondSave, periodic]), ['error', 'saved', true])
+    assert.equal(errors.mock.callCount(), 1)
+    assert.equal(attempts.length, 3)
+    assert.equal(commits.length, 2)
+    for (const snapshot of commits) {
+      assert.deepEqual(snapshot.tabs[0], { ...before, markdown: '排队期间继续输入' })
+      assert.equal(snapshot.tabs[1].path, secondPath)
+    }
+    assert.equal(store.tabs[0].path, null)
+    assert.equal(store.tabs[0].dirty, true)
+    assert.deepEqual(writes.map((item) => item.path), [firstPath, secondPath])
+    assert.ok(save.mock.calls.every((call) => call.arguments[1] === undefined))
+  })
+
+  test('不同 store 的普通会话队列互不阻塞', async (t) => {
+    const { store, api, newStore } = fixture(t)
+    const other = newStore()
+    await store.restoreSession()
+    await other.restoreSession()
+    const first = store.newUntitled()!
+    const second = other.newUntitled()!
+    const release = deferred<void>()
+    const save = api.saveSession
+    const requests: string[] = []
+    t.mock.method(api, 'saveSession', async (snapshot: EditorSession, options?: SessionSaveOptions) => {
+      requests.push(snapshot.tabs[0].id)
+      if (snapshot.tabs[0].id === first.id) await release.promise
+      return save(snapshot, options)
+    })
+    const blocked = store.persistSession()
+    const independent = other.persistSession()
+    try {
+      await nextTurn()
+      assert.deepEqual(requests, [first.id, second.id])
+    } finally {
+      release.resolve()
+      await Promise.all([blocked, independent])
+    }
+    assert.deepEqual(await Promise.all([blocked, independent]), [true, true])
   })
 })

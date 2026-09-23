@@ -46,6 +46,21 @@ watch(() => tabs.sessionError, (failed) => {
   if (failed) notifySessionError()
 })
 
+watch(() => tabs.cleanupPending, (pending) => {
+  if (pending) message.warning(t('notify.draftCleanupPending'))
+})
+
+watch(
+  () => tabs.sessionReady ? tabs.tabs.flatMap((tab) => tab.path ? [tab.path] : []) : null,
+  (paths) => {
+    if (paths === null) return
+    void window.kmde.watchOpenFiles(paths).catch((error) => {
+      console.error('[watcher] 文件监听失败:', error)
+      message.warning(t('notify.fileWatchFailed'))
+    })
+  }
+)
+
 const editorAreaRef = ref<InstanceType<typeof EditorArea> | null>(null)
 const paletteRef = ref<InstanceType<typeof CommandPalette> | null>(null)
 const exportRef = ref<InstanceType<typeof ExportDialog> | null>(null)
@@ -65,7 +80,8 @@ watch(
 const paletteCommands = computed<PaletteCommand[]>(() => [
   { id: 'new-file', title: t('palette.newFile'), shortcut: 'Ctrl+N' },
   { id: 'open-file', title: t('palette.openFile'), shortcut: 'Ctrl+O' },
-  { id: 'open-folder', title: t('palette.openFolder'), shortcut: 'Ctrl+K Ctrl+O' },
+  { id: 'open-folder', title: t('palette.openFolder'), shortcut: 'Ctrl+Shift+O' },
+  { id: 'close-folder', title: t('sidebar.closeWorkspace') },
   { id: 'save', title: t('palette.save'), shortcut: 'Ctrl+S' },
   { id: 'save-as', title: t('palette.saveAs'), shortcut: 'Ctrl+Shift+S' },
   { id: 'export', title: t('palette.export'), shortcut: 'Ctrl+Shift+E' },
@@ -115,6 +131,15 @@ async function openFolderPicker(): Promise<void> {
   }
 }
 
+async function closeWorkspace(): Promise<void> {
+  if (!tabs.sessionReady || closingApp.value || closingTabs.size) return
+  try {
+    await workspace.closeFolder()
+  } catch (err) {
+    message.error(t('notify.closeWorkspaceFailed', { msg: err instanceof Error ? err.message : String(err) }))
+  }
+}
+
 async function openLastWorkspace(): Promise<void> {
   if (settings.lastWorkspace) {
     try {
@@ -130,6 +155,9 @@ async function newFile(): Promise<void> {
   const result = tabs.newUntitled()
   if (!result) {
     message.warning(t('notify.tabLimitReached', { limit: MAX_TABS }))
+  } else {
+    // 空草稿也立即请求独立本地文件，后续编辑继续周期备份。
+    if (!await persistence.flush()) notifySessionError()
   }
 }
 
@@ -153,6 +181,9 @@ async function runCommand(command: MenuCommand): Promise<void> {
       break
     case 'open-folder':
       await openFolderPicker()
+      break
+    case 'close-folder':
+      await closeWorkspace()
       break
     case 'save': {
       const tab = tabs.activeTab
@@ -258,17 +289,34 @@ async function closeTab(id: string): Promise<void> {
       const ok = window.confirm(t('notify.unsavedCloseConfirm', { name: tab.fileName }))
       if (ok && !await tabs.flushSave(id)) return
     }
-    // 先保全草稿再移出打开列表；关闭标签不删除临时文件。
-    if (!await persistence.flush()) {
-      notifySessionError()
-      return
-    }
-    tabs.removeTab(id)
-    if (!await persistence.flush()) notifySessionError()
+    // 主动关闭临时标签是丢弃草稿；会话提交失败则留在原页供重试。
+    if (!await tabs.closePersistedTab(id)) notifySessionError()
   } finally {
     closingTabs.delete(id)
     if (!closingTabs.size) persistence.resume()
   }
+}
+
+async function closeTabs(mode: 'all' | 'others' | 'left' | 'right', id: string): Promise<void> {
+  const index = tabs.tabs.findIndex((tab) => tab.id === id)
+  if (index < 0) return
+  const targets = tabs.tabs
+    .filter((tab, i) => {
+      if (mode === 'all') return true
+      if (mode === 'others') return tab.id !== id
+      if (mode === 'left') return i < index
+      return i > index
+    })
+    .map((tab) => tab.id)
+  for (const targetId of targets) await closeTab(targetId)
+}
+
+function revealTab(id: string): void {
+  const tab = tabs.tabs.find((item) => item.id === id)
+  if (!tab?.path) return
+  void window.kmde.showItemInFolder(tab.path).catch(() => {
+    message.error(t('notify.revealFailed'))
+  })
 }
 
 async function requestCloseApp(reload = false): Promise<void> {
@@ -368,13 +416,9 @@ onMounted(async () => {
   try {
     await settings.load()
     await tabs.restoreSession()
-    if (settings.lastWorkspace) {
-      try {
-        if (await window.kmde.exists(settings.lastWorkspace)) await workspace.openFolder(settings.lastWorkspace)
-      } catch {
-        message.warning(t('notify.restoreWorkspaceFailed'))
-      }
-    }
+    // 文档恢复决定编辑就绪；工作区读取和索引不再占用启动屏障。
+    initializing.value = false
+    void openLastWorkspace()
     await window.kmde.rendererReady()
   } catch (error) {
     console.error('[session] 恢复失败:', error)
@@ -415,9 +459,11 @@ function onOutlineResize(delta: number): void {
       :inert="closingApp || closingTabs.size > 0 || !tabs.sessionReady"
       @new-file="newFile()"
       @close-tab="closeTab"
+      @close-tabs="closeTabs"
+      @reveal-tab="revealTab"
     />
     <div class="workbench-main" :inert="closingApp || closingTabs.size > 0 || !tabs.sessionReady">
-      <FileTree v-if="settings.sidebarVisible" @open-file="openFileByPath" />
+      <FileTree v-if="settings.sidebarVisible" @open-file="openFileByPath" @close-folder="closeWorkspace" />
       <Resizer
         v-if="settings.sidebarVisible"
         side="left"
@@ -452,7 +498,7 @@ function onOutlineResize(delta: number): void {
         @jump="handleOutlineJump"
       />
     </div>
-    <StatusBar />
+    <StatusBar @toggle-mode="runCommand('toggle-mode')" />
     <CommandPalette ref="paletteRef" :commands="paletteCommands" @run-command="runPaletteCommand" @open-file="openFileByPath" />
     <ConflictDialog />
     <ExportDialog ref="exportRef" />

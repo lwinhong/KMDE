@@ -2,6 +2,9 @@
 import { ref, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useEditor, EditorContent } from '@tiptap/vue-3'
 import { BubbleMenu } from '@tiptap/vue-3/menus'
+import { Extension } from '@tiptap/core'
+import { Plugin, PluginKey } from '@tiptap/pm/state'
+import { Decoration, DecorationSet } from '@tiptap/pm/view'
 import type { OutlineItem } from '@shared/types'
 import type { EditorTab } from '@/stores/tabs.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
@@ -43,6 +46,33 @@ const tableToolbarStyle = ref<{ left: string; top: string }>({ left: '0px', top:
 
 let syncTimer: ReturnType<typeof setTimeout> | null = null
 
+const searchPluginKey = new PluginKey('kmdeSearch')
+
+const SearchHighlight = Extension.create({
+  name: 'kmdeSearchHighlight',
+  addProseMirrorPlugins() {
+    return [
+      new Plugin({
+        key: searchPluginKey,
+        state: {
+          init: () => DecorationSet.empty,
+          apply(tr, value) {
+            const meta = tr.getMeta(searchPluginKey) as DecorationSet | undefined
+            if (meta) return meta
+            if (tr.docChanged) return value.map(tr.mapping, tr.doc)
+            return value
+          }
+        },
+        props: {
+          decorations(state) {
+            return searchPluginKey.getState(state) as DecorationSet
+          }
+        }
+      })
+    ]
+  }
+})
+
 const editor = useEditor({
   content: props.tab.markdown,
   editable: !props.locked,
@@ -55,7 +85,7 @@ const editor = useEditor({
       class: 'notion-editor-prosemirror'
     }
   },
-  extensions: buildEditorExtensions(props.tab.path),
+  extensions: [...buildEditorExtensions(props.tab.path), SearchHighlight],
   contentType: 'markdown',
   onCreate() {
     emitOutline()
@@ -128,6 +158,123 @@ function jumpTo(item: OutlineItem): void {
     .setTextSelection(item.pos + 1)
     .scrollIntoView()
     .run()
+}
+
+// ---------------- find / replace ----------------
+
+let searchQuery = ''
+let searchCase = false
+let searchMatches: { from: number; to: number }[] = []
+let searchIndex = -1
+
+function collectMatches(): { from: number; to: number }[] {
+  const e = editor.value
+  if (!e || !searchQuery) return []
+  const needle = searchCase ? searchQuery : searchQuery.toLowerCase()
+  const result: { from: number; to: number }[] = []
+  e.state.doc.descendants((node, pos) => {
+    if (!node.isText || !node.text) return true
+    const text = searchCase ? node.text : node.text.toLowerCase()
+    let index = text.indexOf(needle)
+    while (index !== -1) {
+      result.push({ from: pos + index, to: pos + index + searchQuery.length })
+      index = text.indexOf(needle, index + needle.length)
+    }
+    return true
+  })
+  return result
+}
+
+function applyDecorations(): void {
+  const e = editor.value
+  if (!e) return
+  const decorations = searchMatches.map((match, i) =>
+    Decoration.inline(match.from, match.to, {
+      class: i === searchIndex ? 'kmde-search-match is-current' : 'kmde-search-match'
+    })
+  )
+  e.view.dispatch(e.state.tr.setMeta(searchPluginKey, DecorationSet.create(e.state.doc, decorations)))
+}
+
+function scrollToMatch(): void {
+  const e = editor.value
+  const match = searchMatches[searchIndex]
+  if (!e || !match) return
+  const at = e.view.domAtPos(match.from)
+  const el = at.node.nodeType === 3 ? (at.node.parentElement as HTMLElement) : (at.node as HTMLElement)
+  el?.scrollIntoView({ block: 'center' })
+}
+
+function searchState(): { total: number; current: number } {
+  return { total: searchMatches.length, current: searchIndex >= 0 ? searchIndex + 1 : 0 }
+}
+
+function searchUpdate(query: string, caseSensitive: boolean): { total: number; current: number } {
+  searchQuery = query
+  searchCase = caseSensitive
+  searchMatches = collectMatches()
+  searchIndex = searchMatches.length ? 0 : -1
+  applyDecorations()
+  scrollToMatch()
+  return searchState()
+}
+
+function searchNext(): { total: number; current: number } {
+  if (searchMatches.length) {
+    searchIndex = (searchIndex + 1) % searchMatches.length
+    applyDecorations()
+    scrollToMatch()
+  }
+  return searchState()
+}
+
+function searchPrev(): { total: number; current: number } {
+  if (searchMatches.length) {
+    searchIndex = (searchIndex - 1 + searchMatches.length) % searchMatches.length
+    applyDecorations()
+    scrollToMatch()
+  }
+  return searchState()
+}
+
+function searchReplace(replacement: string): { total: number; current: number } {
+  const e = editor.value
+  const match = searchMatches[searchIndex]
+  if (!e || !match) return searchState()
+  e.view.dispatch(e.state.tr.insertText(replacement, match.from, match.to))
+  searchMatches = collectMatches()
+  if (searchIndex >= searchMatches.length) searchIndex = searchMatches.length - 1
+  applyDecorations()
+  scrollToMatch()
+  return searchState()
+}
+
+function searchReplaceAll(replacement: string): { total: number; current: number } {
+  const e = editor.value
+  if (!e || !searchMatches.length) return searchState()
+  const tr = e.state.tr
+  for (let i = searchMatches.length - 1; i >= 0; i--) {
+    tr.insertText(replacement, searchMatches[i].from, searchMatches[i].to)
+  }
+  e.view.dispatch(tr)
+  searchMatches = collectMatches()
+  searchIndex = -1
+  applyDecorations()
+  return searchState()
+}
+
+function searchClear(): void {
+  searchQuery = ''
+  searchMatches = []
+  searchIndex = -1
+  applyDecorations()
+}
+
+function getSelectedText(): string {
+  const e = editor.value
+  if (!e) return ''
+  const { from, to } = e.state.selection
+  return e.state.doc.textBetween(from, to, ' ')
 }
 
 // external reload
@@ -245,7 +392,18 @@ onBeforeUnmount(() => {
   editor.value?.destroy()
 })
 
-defineExpose({ flush, jumpTo, emitOutline })
+defineExpose({
+  flush,
+  jumpTo,
+  emitOutline,
+  searchUpdate,
+  searchNext,
+  searchPrev,
+  searchReplace,
+  searchReplaceAll,
+  searchClear,
+  getSelectedText
+})
 </script>
 
 <template>
@@ -322,5 +480,16 @@ defineExpose({ flush, jumpTo, emitOutline })
   max-width: 880px;
   min-width: 820px;
   padding: 24px 32px 120px;
+}
+</style>
+
+<style>
+.kmde-search-match {
+  background: var(--kme-search-match);
+  border-radius: 2px;
+}
+
+.kmde-search-match.is-current {
+  background: var(--kme-search-match-active);
 }
 </style>

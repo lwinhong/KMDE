@@ -1,16 +1,22 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
-import { useTabsStore } from '../../stores/tabs.store'
+import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { NDropdown } from 'naive-ui'
+import type { DropdownOption } from 'naive-ui'
+import { useTabsStore, type EditorTab } from '../../stores/tabs.store'
 import { useWorkspaceStore } from '../../stores/workspace.store'
 import { MarkdownIcon } from '../editor/tiptap/icons/index.jsx'
 
 const emit = defineEmits<{
   (e: 'new-file'): void
   (e: 'close-tab', id: string): void
+  (e: 'close-tabs', mode: 'all' | 'others' | 'left' | 'right', id: string): void
+  (e: 'reveal-tab', id: string): void
 }>()
 
 const tabs = useTabsStore()
 const workspace = useWorkspaceStore()
+const { t } = useI18n()
 
 const scrollRef = ref<HTMLElement | null>(null)
 const canScrollLeft = ref(false)
@@ -80,6 +86,47 @@ function onAuxClick(e: MouseEvent, id: string): void {
     emit('close-tab', id)
   }
 }
+
+const ctxVisible = ref(false)
+const ctxX = ref(0)
+const ctxY = ref(0)
+const ctxTabId = ref<string | null>(null)
+
+function onTabContextMenu(e: MouseEvent, tab: EditorTab): void {
+  e.preventDefault()
+  ctxTabId.value = tab.id
+  ctxX.value = e.clientX
+  ctxY.value = e.clientY
+  ctxVisible.value = true
+}
+
+const ctxOptions = computed<DropdownOption[]>(() => {
+  const index = tabs.tabs.findIndex((item) => item.id === ctxTabId.value)
+  const tab = tabs.tabs[index]
+  if (!tab) return []
+  return [
+    { label: t('tabbar.contextClose'), key: 'close' },
+    { label: t('tabbar.contextCloseOthers'), key: 'close-others', disabled: tabs.tabs.length <= 1 },
+    { label: t('tabbar.contextCloseLeft'), key: 'close-left', disabled: index <= 0 },
+    { label: t('tabbar.contextCloseRight'), key: 'close-right', disabled: index >= tabs.tabs.length - 1 },
+    { label: t('tabbar.contextCloseAll'), key: 'close-all' },
+    { type: 'divider', key: 'divider' },
+    { label: t('tabbar.contextReveal'), key: 'reveal', disabled: !tab.path }
+  ]
+})
+
+function onCtxSelect(key: string | number): void {
+  ctxVisible.value = false
+  const id = ctxTabId.value
+  if (!id) return
+  const action = String(key)
+  if (action === 'close') emit('close-tab', id)
+  else if (action === 'close-all') emit('close-tabs', 'all', id)
+  else if (action === 'close-others') emit('close-tabs', 'others', id)
+  else if (action === 'close-left') emit('close-tabs', 'left', id)
+  else if (action === 'close-right') emit('close-tabs', 'right', id)
+  else if (action === 'reveal') emit('reveal-tab', id)
+}
 </script>
 
 <template>
@@ -104,6 +151,7 @@ function onAuxClick(e: MouseEvent, id: string): void {
         :title="tab.path ?? tab.fileName"
         @click="onTabClick(tab.id)"
         @auxclick="onAuxClick($event, tab.id)"
+        @contextmenu="onTabContextMenu($event, tab)"
       >
         <span class="tabbar-tab-icon"><MarkdownIcon :size="14" /></span>
         <span class="tabbar-tab-label">
@@ -135,6 +183,16 @@ function onAuxClick(e: MouseEvent, id: string): void {
         </button>
       </div>
     </div>
+    <n-dropdown
+      trigger="manual"
+      placement="bottom-start"
+      :show="ctxVisible"
+      :x="ctxX"
+      :y="ctxY"
+      :options="ctxOptions"
+      @clickoutside="ctxVisible = false"
+      @select="onCtxSelect"
+    />
   </div>
 </template>
 
@@ -191,7 +249,7 @@ function onAuxClick(e: MouseEvent, id: string): void {
   box-shadow: var(--kme-tab-active-shadow);
 }
 
-.tabbar-tab.is-active::after {
+/* .tabbar-tab.is-active::after {
   content: '';
   position: absolute;
   top: 0px;
@@ -200,7 +258,7 @@ function onAuxClick(e: MouseEvent, id: string): void {
   height: 1px;
   border-radius: var(--kme-radius-full);
   background: var(--kme-tab-active-indicator);
-}
+} */
 
 .tabbar-tab-icon {
   display: inline-flex;
@@ -335,7 +393,7 @@ function onAuxClick(e: MouseEvent, id: string): void {
   right: 100%;
   top: 0;
   bottom: 0;
-  width: 12px;
+  width: 6px;
   background: linear-gradient(to right, transparent, var(--kme-tabbar-bg));
   pointer-events: none;
 }

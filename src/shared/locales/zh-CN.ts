@@ -77,9 +77,20 @@ export default {
     charCount: '{count} 字',
     sourceMode: '源码模式',
     wysiwygMode: '所见即所得',
+    toggleModeHint: '点击切换 源码 / 所见即所得 模式',
     toggleTheme: '切换主题 (F11)',
     dark: '🌙 深色',
     light: '☀️ 浅色'
+  },
+  search: {
+    findPlaceholder: '查找',
+    replacePlaceholder: '替换为',
+    prev: '上一个 (Shift+Enter)',
+    next: '下一个 (Enter)',
+    caseSensitive: '区分大小写',
+    toggleReplace: '显示 / 隐藏替换',
+    replace: '替换',
+    replaceAll: '全部替换'
   },
   welcome: {
     subtitle: 'K Markdown Editor',
@@ -98,10 +109,20 @@ export default {
     openFile: '打开文件 (Ctrl+O)',
     openFolder: '打开文件夹 (Ctrl+Shift+O)',
     scrollLeft: '向左滚动',
-    scrollRight: '向右滚动'
+    scrollRight: '向右滚动',
+    contextClose: '关闭',
+    contextCloseOthers: '关闭其他',
+    contextCloseLeft: '关闭左侧',
+    contextCloseRight: '关闭右侧',
+    contextCloseAll: '关闭全部',
+    contextReveal: '在文件管理器中打开'
   },
   sidebar: {
     explorer: '资源管理器',
+    closeWorkspace: '关闭工作区',
+    loading: '正在读取目录…',
+    indexing: '后台索引中…',
+    loadMore: '加载更多',
     newFile: '新建文件',
     newFolder: '新建文件夹',
     removeToTrash: '删除（移入回收站）',
@@ -198,6 +219,9 @@ export default {
     openFileFailed: '打开文件失败: {msg}',
     openFolderFailed: '打开文件夹失败: {msg}',
     restoreWorkspaceFailed: '无法恢复上次的工作区',
+    closeWorkspaceFailed: '工作区关闭或状态保存失败，请重试: {msg}',
+    fileWatchFailed: '文件变更监听失败，请重新打开文件或重启应用。',
+    draftCleanupPending: '会话已保存，但临时文件清理失败，将自动重试；请检查目录权限。',
     sessionRestoreFailed: '无法读取上次会话，已保留原始数据。请检查应用数据目录的权限与会话文件后重新启动。',
     sessionSaveFailed: '草稿或会话保存失败，请勿强制退出；检查磁盘空间和权限后重试。',
     saveFailed: '保存失败',
@@ -207,7 +231,8 @@ export default {
     unsavedCloseConfirm: '「{name}」有未保存的修改，是否保存并关闭？',
     fileReloaded: '「{name}」已在磁盘上被修改，已重新加载',
     fileLoading: '文件正在加载，请稍后再试',
-    tabLimitReached: '页签已达上限（{limit} 个），请先关闭部分页签'
+    tabLimitReached: '页签已达上限（{limit} 个），请先关闭部分页签',
+    revealFailed: '在文件管理器中打开失败'
   },
   palette: {
     newFile: '新建文件',

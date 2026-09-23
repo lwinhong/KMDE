@@ -4,6 +4,8 @@ import type {
   AppLocale,
   AppSettings,
   EditorSession,
+  SessionSaveOptions,
+  SessionSaveResult,
   FileNode,
   FsEvent,
   MenuCommand,
@@ -42,8 +44,10 @@ const api = {
     ipcRenderer.invoke('fs:rename', oldPath, newPath),
   removeEntry: (path: string): Promise<boolean> => ipcRenderer.invoke('fs:remove', path),
   exists: (path: string): Promise<boolean> => ipcRenderer.invoke('fs:exists', path),
+  showItemInFolder: (path: string): Promise<boolean> => ipcRenderer.invoke('fs:showInFolder', path),
   watchWorkspace: (root: string): Promise<boolean> => ipcRenderer.invoke('fs:watch', root),
   unwatchWorkspace: (): Promise<boolean> => ipcRenderer.invoke('fs:unwatch'),
+  watchOpenFiles: (paths: string[]): Promise<boolean> => ipcRenderer.invoke('fs:watchFiles', paths),
 
   loadSettings: (): Promise<AppSettings> => ipcRenderer.invoke('settings:load'),
   saveSettings: (settings: AppSettings): Promise<boolean> =>
@@ -51,7 +55,8 @@ const api = {
   setLocale: (locale: AppLocale): Promise<boolean> => ipcRenderer.invoke('app:set-locale', locale),
 
   loadSession: (): Promise<EditorSession | null> => ipcRenderer.invoke('session:load'),
-  saveSession: (session: EditorSession): Promise<void> => ipcRenderer.invoke('session:save', session),
+  saveSession: (session: EditorSession, options?: SessionSaveOptions): Promise<SessionSaveResult> =>
+    ipcRenderer.invoke('session:save', session, options),
   rendererReady: (): Promise<void> => ipcRenderer.invoke('app:renderer-ready'),
 
   exportHtml: (html: string, outPath: string): Promise<string> =>

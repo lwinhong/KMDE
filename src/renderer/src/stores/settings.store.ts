@@ -19,8 +19,13 @@ export const useSettingsStore = defineStore('settings', {
       i18n.global.locale.value = this.language
       this.applyThemeClass()
     },
-    persist(): void {
-      void window.kmde.saveSettings({ ...this.$state })
+    persist(): Promise<void> {
+      const saving = window.kmde.saveSettings({ ...this.$state }).then((ok) => {
+        if (!ok) throw new Error('设置保存失败')
+      })
+      // 普通界面设置可以即发即忘；工作区关闭仍能 await 原始失败。
+      void saving.catch((error) => console.error('[settings] 保存失败:', error))
+      return saving
     },
     setLanguage(locale: AppLocale): void {
       if (this.language === locale) return

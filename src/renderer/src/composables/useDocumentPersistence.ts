@@ -6,11 +6,32 @@ export function useDocumentPersistence(onSaveError: () => void) {
   const tabs = useTabsStore()
   const paused = shallowRef(false)
   let sessionTimer: ReturnType<typeof setTimeout> | undefined
+  let cleanupTimer: ReturnType<typeof setTimeout> | undefined
+  let disposed = false
+
+  function scheduleCleanup(): void {
+    if (disposed || paused.value || !tabs.sessionReady || !tabs.cleanupPending || cleanupTimer) return
+    cleanupTimer = setTimeout(async () => {
+      cleanupTimer = undefined
+      if (disposed || paused.value) return
+      await tabs.persistSession()
+      scheduleCleanup()
+    }, 5000)
+  }
+
+  watch(() => [tabs.cleanupPending, tabs.sessionReady, paused.value], () => {
+    if (!tabs.cleanupPending || !tabs.sessionReady || paused.value) {
+      clearTimeout(cleanupTimer)
+      cleanupTimer = undefined
+    } else scheduleCleanup()
+  })
   const fileTimers = new Map<string, { markdown: string; path: string; timer: ReturnType<typeof setTimeout> }>()
 
   function cancelTimers(): void {
     clearTimeout(sessionTimer)
     sessionTimer = undefined
+    clearTimeout(cleanupTimer)
+    cleanupTimer = undefined
     for (const entry of fileTimers.values()) clearTimeout(entry.timer)
     fileTimers.clear()
   }
@@ -70,6 +91,9 @@ export function useDocumentPersistence(onSaveError: () => void) {
     return tabs.persistSession()
   }
 
-  onBeforeUnmount(cancelTimers)
+  onBeforeUnmount(() => {
+    disposed = true
+    cancelTimers()
+  })
   return { pause, resume, flush }
 }

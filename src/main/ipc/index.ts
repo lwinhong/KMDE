@@ -1,7 +1,8 @@
 import { app, BrowserWindow, dialog, ipcMain, protocol, shell } from 'electron'
 import { promises as fs, createReadStream, existsSync, statSync } from 'fs'
 import { join, extname, isAbsolute, resolve, dirname } from 'path'
-import type { AppSettings, EditorSession, FileNode } from '../../shared/types'
+import type { AppSettings, EditorSession, SessionSaveOptions, SessionSaveResult } from '../../shared/types'
+import { listWorkspaceDir } from '../workspaceFiles'
 import { WatcherManager } from '../watcher'
 import { t } from '../i18n'
 import { readSettings, writeSettings } from '../settings'
@@ -18,10 +19,6 @@ const watcherManager = new WatcherManager((event) => {
   sendToRenderer('fs:event', event)
 })
 
-function isIgnoredName(name: string): boolean {
-  return name === 'node_modules' || name === '.git' || name === 'dist' || name === 'out' || name === '.hvigor'
-}
-
 function validatePath(p: unknown): string {
   if (typeof p !== 'string' || p.length === 0 || p.includes('\0')) {
     throw new Error(t('errors.illegalPath'))
@@ -33,37 +30,8 @@ function validatePath(p: unknown): string {
   return resolved
 }
 
-async function listDir(dir: string): Promise<FileNode[]> {
-  const entries = await fs.readdir(dir, { withFileTypes: true })
-  const nodes: FileNode[] = []
-  for (const entry of entries) {
-    if (entry.name.startsWith('.') || isIgnoredName(entry.name)) continue
-    const fullPath = join(dir, entry.name)
-    let size = 0
-    try {
-      if (entry.isFile()) {
-        size = (await fs.stat(fullPath)).size
-      }
-    } catch {
-      // file may vanish
-    }
-    nodes.push({
-      name: entry.name,
-      path: fullPath,
-      isDir: entry.isDirectory(),
-      ext: entry.isDirectory() ? '' : extname(entry.name).toLowerCase(),
-      size
-    })
-  }
-  nodes.sort((a, b) => {
-    if (a.isDir !== b.isDir) return a.isDir ? -1 : 1
-    return a.name.localeCompare(b.name, 'zh-CN')
-  })
-  return nodes
-}
-
 function registerFsIpc(): void {
-  ipcMain.handle('fs:listDir', (_e, dir: string) => listDir(validatePath(dir)))
+  ipcMain.handle('fs:listDir', (_e, dir: string) => listWorkspaceDir(validatePath(dir)))
 
   ipcMain.handle(
     'fs:readFile',
@@ -141,7 +109,8 @@ function registerFsIpc(): void {
   ipcMain.handle('fs:exists', (_e, path: string) =>
     (async () => {
       try {
-        return existsSync(validatePath(path))
+        await fs.access(validatePath(path))
+        return true
       } catch {
         return false
       }
@@ -158,12 +127,23 @@ function registerFsIpc(): void {
     return true
   })
 
+  ipcMain.handle('fs:watchFiles', (_e, paths: string[]) => {
+    if (!Array.isArray(paths) || paths.length > 1000) throw new Error('打开文件监听列表无效')
+    watcherManager.setOpenFiles(paths.map(validatePath))
+    return true
+  })
+
   ipcMain.handle('fs:fileSize', (_e, path: string) =>
     (async () => {
       const stats = await fs.stat(validatePath(path))
       return stats.size
     })()
   )
+
+  ipcMain.handle('fs:showInFolder', (_e, path: string) => {
+    shell.showItemInFolder(validatePath(path))
+    return true
+  })
 }
 
 function registerDialogIpc(): void {
@@ -209,7 +189,8 @@ function registerSettingsIpc(): void {
 function registerSessionIpc(): void {
   const storage = new SessionStorage(join(app.getPath('userData'), 'session'))
   ipcMain.handle('session:load', (): Promise<EditorSession | null> => storage.load())
-  ipcMain.handle('session:save', (_event, session: EditorSession): Promise<void> => storage.save(session))
+  ipcMain.handle('session:save', (_event, session: EditorSession, options?: SessionSaveOptions): Promise<SessionSaveResult> =>
+    storage.save(session, options))
 }
 
 const IMAGE_MIME: Record<string, string> = {

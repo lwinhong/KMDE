@@ -12,13 +12,13 @@ import {
   crosshairCursor,
   highlightActiveLine
 } from '@codemirror/view'
-import { EditorState, Compartment, type Extension } from '@codemirror/state'
+import { EditorState, Compartment, EditorSelection, type Extension } from '@codemirror/state'
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands'
 import { foldGutter, indentOnInput, bracketMatching, foldKeymap, syntaxHighlighting, defaultHighlightStyle } from '@codemirror/language'
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown'
 import { languages } from '@codemirror/language-data'
 import { oneDark } from '@codemirror/theme-one-dark'
-import { search, searchKeymap } from '@codemirror/search'
+import { SearchQuery, search, setSearchQuery } from '@codemirror/search'
 import type { OutlineItem } from '@shared/types'
 import type { EditorTab } from '@/stores/tabs.store'
 import { useSettingsStore } from '@/stores/settings.store'
@@ -72,7 +72,9 @@ const kmdeCmTheme = EditorView.theme({
   '.cm-activeLineGutter': { backgroundColor: 'var(--kme-bg-hover)', color: 'var(--kme-text-1)' },
   '.cm-selectionBackground, ::selection': { backgroundColor: 'var(--kme-selection)' },
   '&.cm-focused .cm-selectionBackground': { backgroundColor: 'var(--kme-selection)' },
-  '.cm-cursor': { borderLeftColor: 'var(--kme-primary)' }
+  '.cm-cursor': { borderLeftColor: 'var(--kme-primary)' },
+  '.cm-searchMatch': { backgroundColor: 'var(--kme-search-match)' },
+  '.cm-searchMatch.cm-searchMatch-selected': { backgroundColor: 'var(--kme-search-match-active)' }
 })
 
 function buildExtensions(): Extension[] {
@@ -94,7 +96,7 @@ function buildExtensions(): Extension[] {
     search({ top: true }),
     markdown({ base: markdownLanguage, codeLanguages: languages }),
     EditorView.lineWrapping,
-    keymap.of([...defaultKeymap, ...historyKeymap, ...foldKeymap, ...searchKeymap, indentWithTab]),
+    keymap.of([...defaultKeymap, ...historyKeymap, ...foldKeymap, indentWithTab]),
     themeComp.of(highlight),
     editableComp.of([EditorView.editable.of(!props.locked), EditorState.readOnly.of(props.locked)]),
     kmdeCmTheme,
@@ -168,6 +170,106 @@ function jumpTo(item: OutlineItem): void {
   view.focus()
 }
 
+// ---------------- find / replace ----------------
+
+let searchQuery = ''
+let searchCase = false
+let searchMatches: { from: number; to: number }[] = []
+let searchIndex = -1
+
+function buildSearchQuery(): SearchQuery {
+  return new SearchQuery({ search: searchQuery, caseSensitive: searchCase })
+}
+
+function collectMatches(): { from: number; to: number }[] {
+  if (!view || !searchQuery) return []
+  const cursor = buildSearchQuery().getCursor(view.state.doc)
+  const result: { from: number; to: number }[] = []
+  for (let next = cursor.next(); !next.done; next = cursor.next()) {
+    result.push({ from: next.value.from, to: next.value.to })
+  }
+  return result
+}
+
+function highlightMatches(): void {
+  if (!view) return
+  view.dispatch({
+    effects: setSearchQuery.of(searchQuery ? buildSearchQuery() : new SearchQuery({ search: '' }))
+  })
+}
+
+function gotoCurrentMatch(): void {
+  const match = searchMatches[searchIndex]
+  if (!view || !match) return
+  view.dispatch({
+    selection: EditorSelection.single(match.from, match.to),
+    effects: EditorView.scrollIntoView(match.from, { y: 'center' })
+  })
+}
+
+function searchState(): { total: number; current: number } {
+  return { total: searchMatches.length, current: searchIndex >= 0 ? searchIndex + 1 : 0 }
+}
+
+function searchUpdate(query: string, caseSensitive: boolean): { total: number; current: number } {
+  searchQuery = query
+  searchCase = caseSensitive
+  searchMatches = collectMatches()
+  searchIndex = searchMatches.length ? 0 : -1
+  highlightMatches()
+  gotoCurrentMatch()
+  return searchState()
+}
+
+function searchNext(): { total: number; current: number } {
+  if (searchMatches.length) {
+    searchIndex = (searchIndex + 1) % searchMatches.length
+    gotoCurrentMatch()
+  }
+  return searchState()
+}
+
+function searchPrev(): { total: number; current: number } {
+  if (searchMatches.length) {
+    searchIndex = (searchIndex - 1 + searchMatches.length) % searchMatches.length
+    gotoCurrentMatch()
+  }
+  return searchState()
+}
+
+function searchReplace(replacement: string): { total: number; current: number } {
+  const match = searchMatches[searchIndex]
+  if (!view || !match) return searchState()
+  view.dispatch({ changes: { from: match.from, to: match.to, insert: replacement } })
+  searchMatches = collectMatches()
+  if (searchIndex >= searchMatches.length) searchIndex = searchMatches.length - 1
+  highlightMatches()
+  gotoCurrentMatch()
+  return searchState()
+}
+
+function searchReplaceAll(replacement: string): { total: number; current: number } {
+  if (!view || !searchMatches.length) return searchState()
+  view.dispatch({ changes: searchMatches.map((m) => ({ from: m.from, to: m.to, insert: replacement })) })
+  searchMatches = collectMatches()
+  searchIndex = -1
+  highlightMatches()
+  return searchState()
+}
+
+function searchClear(): void {
+  searchQuery = ''
+  searchMatches = []
+  searchIndex = -1
+  if (view) view.dispatch({ effects: setSearchQuery.of(new SearchQuery({ search: '' })) })
+}
+
+function getSelectedText(): string {
+  if (!view) return ''
+  const { from, to } = view.state.selection.main
+  return view.state.sliceDoc(from, to)
+}
+
 onMounted(() => {
   if (!hostRef.value) return
   view = new EditorView({
@@ -211,7 +313,18 @@ watch(
   }
 )
 
-defineExpose({ flush, jumpTo, emitOutline })
+defineExpose({
+  flush,
+  jumpTo,
+  emitOutline,
+  searchUpdate,
+  searchNext,
+  searchPrev,
+  searchReplace,
+  searchReplaceAll,
+  searchClear,
+  getSelectedText
+})
 </script>
 
 <template>

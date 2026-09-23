@@ -3,7 +3,7 @@ export interface FileNode {
   path: string
   isDir: boolean
   ext: string
-  size: number
+  size?: number
 }
 
 export interface ReadFileResult {
@@ -79,10 +79,19 @@ export interface EditorSession {
   untitledSeq: number
 }
 
+export interface SessionSaveOptions {
+  discardDraftIds?: string[]
+}
+
+export interface SessionSaveResult {
+  cleanupPending: boolean
+}
+
 export type MenuCommand =
   | 'new-file'
   | 'open-file'
   | 'open-folder'
+  | 'close-folder'
   | 'save'
   | 'save-as'
   | 'export'
@@ -98,5 +107,7 @@ export type MenuCommand =
   | `set-language:${AppLocale}`
 
 export const MAX_WYSIWYG_FILE_SIZE = 2 * 1024 * 1024
+
+export const SUPPORTED_DOCUMENT_EXTENSIONS: ReadonlySet<string> = new Set(['.md', '.markdown', '.mdown', '.txt'])
 
 export const IGNORED_DIR_NAMES = new Set(['node_modules', '.git', 'dist', 'out', '.hvigor'])

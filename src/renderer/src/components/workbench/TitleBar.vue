@@ -87,6 +87,7 @@ const menus = computed<DropdownOption[]>(() => [
       div('f1'),
       item('open-file', t('menu.openFile'), 'Ctrl+O'),
       item('open-folder', t('menu.openFolder'), 'Ctrl+Shift+O'),
+      item('close-folder', t('sidebar.closeWorkspace')),
       div('f2'),
       item('save', t('menu.save'), 'Ctrl+S'),
       item('save-as', t('menu.saveAs'), 'Ctrl+Shift+S'),

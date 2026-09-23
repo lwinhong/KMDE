@@ -6,7 +6,7 @@ import { setImmediate as nextTurn } from 'node:timers/promises'
 import { createPinia, disposePinia, setActivePinia } from 'pinia'
 import { createRenderer, h, nextTick, onMounted, onUnmounted } from 'vue'
 import type { KmdeApi } from '../../../preload'
-import type { EditorSession, ReadFileResult, SessionTab } from '@shared/types'
+import type { EditorSession, ReadFileResult, SessionSaveOptions, SessionSaveResult, SessionTab } from '@shared/types'
 import { i18n } from '../i18n'
 import { useTabsStore } from '../stores/tabs.store'
 import { useDocumentPersistence } from './useDocumentPersistence'
@@ -73,7 +73,10 @@ async function fixture(t: TestContext, options: {
   let mtimeMs = 100
   const api = {
     loadSession: t.mock.fn(async () => clone(options.session ?? null)),
-    saveSession: t.mock.fn(async (session: EditorSession): Promise<void> => { commits.push(clone(session)) }),
+    saveSession: t.mock.fn(async (session: EditorSession, _options?: SessionSaveOptions): Promise<SessionSaveResult> => {
+      commits.push(clone(session))
+      return { cleanupPending: false }
+    }),
     readFile: t.mock.fn(async (path: string): Promise<ReadFileResult> => {
       const file = disk.get(windowsKey(path))
       if (!file) throw Object.assign(new Error('模拟文件不存在'), { code: 'ENOENT' })
@@ -380,15 +383,14 @@ describe('文档持久化宿主与生命周期契约', { concurrency: false, tim
     assert.equal(env.commits.at(-1)!.tabs[0].markdown, '写入失败的编辑内容')
   })
 
-  test('关闭待自动保存的标签会取消文件写入，后续会话快照不再包含它', async (t) => {
+  test('关闭待自动保存的正式标签会取消文件写入，后续会话无该标签且不 discard', async (t) => {
     const env = await fixture(t)
     const tab = await env.open('C:\\笔记\\关闭.md')
     env.store.updateTabContent(tab.id, '关闭前内容')
     await env.advance(100)
     env.persistence.pause()
     assert.equal(await env.persistence.flush(), true)
-    env.store.removeTab(tab.id)
-    assert.equal(await env.persistence.flush(), true)
+    assert.equal(await env.store.closePersistedTab(tab.id), true)
     await nextTick()
     env.persistence.resume()
     await env.advance(2000)
@@ -396,6 +398,269 @@ describe('文档持久化宿主与生命周期契约', { concurrency: false, tim
     assert.equal(env.commits[0].tabs[0].markdown, '关闭前内容')
     assert.deepEqual(env.commits.at(-1)!.tabs, [])
     assert.equal(env.commits.at(-1)!.activeTabId, null)
+    assert.ok(env.api.saveSession.mock.calls.every((call) => call.arguments[1] === undefined))
     assert.equal(env.api.saveAsDialog.mock.callCount(), 0)
+  })
+
+  test('新建空草稿在 400ms 正常会话备份，退出 flush 和卸载均不 discard', async (t) => {
+    const env = await fixture(t)
+    const draft = env.store.newUntitled()!
+    const before = env.store.sessionSnapshot()
+    await env.advance(399)
+    assert.equal(env.commits.length, 0)
+    await env.advance(1)
+    assert.deepEqual(env.commits, [before])
+    assert.equal(env.commits[0].tabs[0].markdown, '')
+    assert.equal(env.commits[0].tabs[0].id, draft.id)
+    env.persistence.pause()
+    assert.equal(await env.persistence.flush(), true)
+    env.unmount()
+    await env.advance(15000)
+    assert.deepEqual(env.commits, [before, before])
+    assert.ok(env.api.saveSession.mock.calls.every((call) => call.arguments[1] === undefined))
+    assert.equal(env.writes.length, 0)
+    assert.equal(env.api.saveAsDialog.mock.callCount(), 0)
+  })
+
+  test('cleanupPending 无编辑也每 5 秒重试，清理成功后停止且从不 discard', async (t) => {
+    const env = await fixture(t)
+    env.store.newUntitled()
+    const before = env.store.sessionSnapshot()
+    const save = env.api.saveSession
+    let attempts = 0
+    const retry = t.mock.method(env.api, 'saveSession', async (snapshot: EditorSession, options?: SessionSaveOptions) => {
+      await save(snapshot, options)
+      return { cleanupPending: ++attempts <= 2 }
+    })
+    await env.advance(400)
+    assert.equal(env.store.cleanupPending, true)
+    assert.equal(env.store.sessionError, false)
+    for (let count = 1; count <= 2; count++) {
+      await env.advance(4999)
+      assert.equal(retry.mock.callCount(), count, '5 秒之前不应重试或进入 400ms 忙循环')
+      await env.advance(1)
+      assert.equal(retry.mock.callCount(), count + 1)
+    }
+    assert.equal(env.store.cleanupPending, false)
+    await env.advance(15000)
+    assert.equal(retry.mock.callCount(), 3)
+    assert.deepEqual(env.commits, [before, before, before])
+    assert.ok(retry.mock.calls.every((call) => call.arguments[1] === undefined))
+    assert.equal(env.writes.length, 0)
+    assert.equal(env.onSaveError.mock.callCount(), 0)
+  })
+
+  test('清理重试提交 reject 保留 pending，失败后仍等满 5 秒再试，不忙循环', async (t) => {
+    const env = await fixture(t)
+    env.store.newUntitled()
+    const before = env.store.sessionSnapshot()
+    const save = env.api.saveSession
+    let attempts = 0
+    const retry = t.mock.method(env.api, 'saveSession', async (snapshot: EditorSession, options?: SessionSaveOptions) => {
+      if (++attempts === 2) throw new Error('模拟后台重试提交失败')
+      await save(snapshot, options)
+      return { cleanupPending: attempts === 1 }
+    })
+    const errors = t.mock.method(console, 'error', () => {})
+    await env.advance(400)
+    await env.advance(5000)
+    assert.equal(retry.mock.callCount(), 2)
+    assert.equal(env.store.cleanupPending, true)
+    assert.equal(env.store.sessionError, true)
+    assert.deepEqual(env.store.sessionSnapshot(), before)
+    await env.advance(0)
+    await env.advance(4999)
+    assert.equal(retry.mock.callCount(), 2)
+    await env.advance(1)
+    assert.equal(retry.mock.callCount(), 3)
+    assert.equal(env.store.cleanupPending, false)
+    assert.equal(env.store.sessionError, false)
+    assert.equal(errors.mock.callCount(), 1)
+    await env.advance(15000)
+    assert.equal(retry.mock.callCount(), 3)
+    assert.ok(retry.mock.calls.every((call) => call.arguments[1] === undefined))
+    assert.equal(env.writes.length, 0)
+  })
+
+  test('pause 取消清理重试，resume 后重新计满 5 秒且不产生 discard', async (t) => {
+    const env = await fixture(t)
+    env.store.newUntitled()
+    const before = env.store.sessionSnapshot()
+    const save = env.api.saveSession
+    const retry = t.mock.method(env.api, 'saveSession', async (snapshot: EditorSession, options?: SessionSaveOptions) => {
+      await save(snapshot, options)
+      return { cleanupPending: true }
+    })
+    await env.advance(400)
+    await env.advance(2500)
+    env.persistence.pause()
+    await env.advance(15000)
+    assert.equal(retry.mock.callCount(), 1)
+    assert.equal(env.store.cleanupPending, true)
+    env.persistence.resume()
+    await nextTick()
+    // 清掉 resume 带来的普通 400ms 会话任务，只观察重新安排的清理任务。
+    assert.equal(await env.persistence.flush(), true)
+    assert.equal(retry.mock.callCount(), 2)
+    await env.advance(4999)
+    assert.equal(retry.mock.callCount(), 2)
+    await env.advance(1)
+    assert.equal(retry.mock.callCount(), 3)
+    env.persistence.pause()
+    await env.advance(15000)
+    assert.equal(retry.mock.callCount(), 3)
+    assert.deepEqual(env.store.sessionSnapshot(), before)
+    assert.ok(retry.mock.calls.every((call) => call.arguments[1] === undefined))
+    assert.equal(env.writes.length, 0)
+  })
+
+  test('卸载取消尚未到期的清理重试，后续 pending 变化也不再调度或 discard', async (t) => {
+    const env = await fixture(t)
+    const draft = env.store.newUntitled()!
+    const save = env.api.saveSession
+    const retry = t.mock.method(env.api, 'saveSession', async (snapshot: EditorSession, options?: SessionSaveOptions) => {
+      await save(snapshot, options)
+      return { cleanupPending: true }
+    })
+    await env.advance(400)
+    await env.advance(4999)
+    env.unmount()
+    assert.equal(env.isMounted(), false)
+    await env.advance(15000)
+    assert.equal(retry.mock.callCount(), 1)
+    env.store.cleanupPending = false
+    await nextTick()
+    env.store.cleanupPending = true
+    env.store.updateTabContent(draft.id, '卸载后的内存编辑')
+    await env.advance(15000)
+    assert.equal(retry.mock.callCount(), 1)
+    assert.equal(retry.mock.calls[0].arguments[1], undefined)
+    assert.equal(env.writes.length, 0)
+  })
+
+  for (const stop of ['pause', 'unmount'] as const) {
+    test(`清理重试尚在等待 IPC 时 ${stop}，迟到的 pending 回包不得重新安排重试`, async (t) => {
+      const env = await fixture(t)
+      env.store.newUntitled()
+      const release = deferred<void>()
+      const save = env.api.saveSession
+      let attempts = 0
+      const retry = t.mock.method(env.api, 'saveSession', async (snapshot: EditorSession, options?: SessionSaveOptions) => {
+        if (++attempts === 2) await release.promise
+        await save(snapshot, options)
+        return { cleanupPending: true }
+      })
+      try {
+        await env.advance(400)
+        await env.advance(5000)
+        assert.equal(retry.mock.callCount(), 2)
+        if (stop === 'pause') env.persistence.pause()
+        else env.unmount()
+      } finally {
+        release.resolve()
+        await env.advance(0)
+      }
+      await env.advance(15000)
+      assert.equal(retry.mock.callCount(), 2)
+      assert.equal(env.store.cleanupPending, true)
+      assert.ok(retry.mock.calls.every((call) => call.arguments[1] === undefined))
+      assert.equal(env.writes.length, 0)
+    })
+  }
+
+  test('旧周期提交未完成时关闭草稿，排队的后续周期提交不得复活该草稿', async (t) => {
+    const env = await fixture(t)
+    const keep = env.store.newUntitled()!
+    const target = env.store.newUntitled()!
+    env.store.updateTabContent(target.id, '待关闭的旧内容')
+    const firstGate = deferred<void>()
+    const closeGate = deferred<void>()
+    const save = env.api.saveSession
+    const requests: Array<{ snapshot: EditorSession; options?: SessionSaveOptions }> = []
+    t.mock.method(env.api, 'saveSession', async (snapshot: EditorSession, options?: SessionSaveOptions) => {
+      requests.push({ snapshot: clone(snapshot), options })
+      if (requests.length === 1) await firstGate.promise
+      else if (requests.length === 2) await closeGate.promise
+      return save(snapshot, options)
+    })
+    let closing: Promise<boolean> | undefined
+    try {
+      await env.advance(400)
+      assert.equal(requests.length, 1)
+      closing = env.store.closePersistedTab(target.id)
+      env.store.updateTabContent(keep.id, '关闭排队期间的新内容')
+      await env.advance(400)
+      assert.equal(requests.length, 1, '周期保存不能越过尚未完成的旧提交')
+      firstGate.resolve()
+      await env.advance(0)
+      assert.equal(requests.length, 2)
+      assert.deepEqual(requests[1].options, { discardDraftIds: [target.id] })
+      assert.deepEqual(requests[1].snapshot.tabs.map((tab) => tab.id), [keep.id])
+      assert.equal(env.store.activeTabId, target.id)
+      assert.equal(env.store.tabs.length, 2)
+    } finally {
+      firstGate.resolve()
+      closeGate.resolve()
+      await closing
+      await env.advance(0)
+    }
+    assert.equal(await closing, true)
+    assert.equal(requests.length, 3)
+    assert.deepEqual(requests.map((request) => request.options), [undefined, { discardDraftIds: [target.id] }, undefined])
+    await env.advance(400)
+    assert.equal(requests.length, 4)
+    assert.deepEqual(env.commits[0].tabs.map((tab) => tab.id), [keep.id, target.id])
+    for (const snapshot of env.commits.slice(1)) {
+      assert.deepEqual(snapshot.tabs.map((tab) => tab.id), [keep.id])
+      assert.equal(snapshot.activeTabId, keep.id)
+      assert.equal(snapshot.tabs[0].markdown, '关闭排队期间的新内容')
+    }
+    assert.equal(requests[3].options, undefined)
+    assert.equal(env.writes.length, 0)
+  })
+
+  test('另存会话提交失败时真实周期任务等待回滚，不提交临时文件身份', async (t) => {
+    const env = await fixture(t)
+    const draft = env.store.newUntitled()!
+    env.store.updateTabContent(draft.id, '另存前草稿')
+    await env.advance(400)
+    const before = env.store.sessionSnapshot().tabs[0]
+    const target = 'D:\\文档\\未提交.md'
+    const release = deferred<void>()
+    const save = env.api.saveSession
+    let attempts = 0
+    const pending = t.mock.method(env.api, 'saveSession', async (snapshot: EditorSession, options?: SessionSaveOptions) => {
+      if (++attempts === 1) {
+        await release.promise
+        throw new Error('模拟另存会话提交失败')
+      }
+      return save(snapshot, options)
+    })
+    const errors = t.mock.method(console, 'error', () => {})
+    const saving = env.store.saveTabAs(draft.id, target)
+    try {
+      await env.advance(0)
+      assert.equal(pending.mock.callCount(), 1)
+      assert.equal(pending.mock.calls[0].arguments[0].tabs[0].path, target)
+      env.store.updateTabContent(draft.id, '提交期间继续编辑')
+      await env.advance(400)
+      assert.equal(pending.mock.callCount(), 1)
+      assert.equal(env.commits.length, 1)
+    } finally {
+      release.resolve()
+      await saving
+      await env.advance(0)
+    }
+    assert.equal(await saving, 'error')
+    assert.equal(errors.mock.callCount(), 1)
+    assert.equal(pending.mock.callCount(), 2)
+    assert.equal(env.commits.length, 2)
+    assert.deepEqual(env.commits[1].tabs[0], { ...before, markdown: '提交期间继续编辑' })
+    await env.advance(800)
+    assert.ok(env.commits.every((snapshot) => snapshot.tabs[0].path === null))
+    assert.equal(env.store.tabs[0].path, null)
+    assert.equal(env.store.tabs[0].dirty, true)
+    assert.deepEqual(env.writes, [{ path: target, content: before.markdown }])
+    assert.ok(pending.mock.calls.every((call) => call.arguments[1] === undefined))
   })
 })

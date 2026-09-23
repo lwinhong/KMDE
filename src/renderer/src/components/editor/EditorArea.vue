@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { watch, nextTick, onBeforeUnmount } from 'vue'
+import { watch, nextTick, onBeforeUnmount, onMounted, ref, computed } from 'vue'
 import type { OutlineItem } from '@shared/types'
 import { useTabsStore, type EditorTab } from '../../stores/tabs.store'
 import TiptapEditor from './tiptap/TiptapEditor.vue'
 import SourceEditor from './source/SourceEditor.vue'
+import SearchReplaceBar from './SearchReplaceBar.vue'
 
 defineProps<{ locked: boolean }>()
 
@@ -14,10 +15,22 @@ const emit = defineEmits<{
 
 const tabs = useTabsStore()
 
+interface SearchState {
+  total: number
+  current: number
+}
+
 interface EditorInstance {
   flush: () => string
   jumpTo: (item: OutlineItem) => void
   emitOutline: () => void
+  searchUpdate: (query: string, caseSensitive: boolean) => SearchState
+  searchNext: () => SearchState
+  searchPrev: () => SearchState
+  searchReplace: (replacement: string) => SearchState
+  searchReplaceAll: (replacement: string) => SearchState
+  searchClear: () => void
+  getSelectedText: () => string
 }
 
 const editorInstances = new Map<string, EditorInstance>()
@@ -36,6 +49,7 @@ function setEditorRef(tabId: string, el: unknown): void {
 watch(
   () => tabs.activeTabId,
   (id) => {
+    closeSearch()
     if (!id) return
     nextTick(() => {
       editorInstances.get(id)?.emitOutline()
@@ -44,6 +58,7 @@ watch(
 )
 
 onBeforeUnmount(() => {
+  window.removeEventListener('keydown', onGlobalKeydown, true)
   flushAll()
   editorInstances.clear()
 })
@@ -78,9 +93,77 @@ function onEditorOutline(tab: EditorTab, items: OutlineItem[], activeId: string 
   }
 }
 
+// ---------------- find / replace ----------------
+
+const searchBarRef = ref<InstanceType<typeof SearchReplaceBar> | null>(null)
+const searchVisible = ref(false)
+const searchOffsetTop = computed(() => (tabs.activeTab?.mode === 'wysiwyg' ? 48 : 8))
+const searchTotal = ref(0)
+const searchCurrent = ref(0)
+
+function activeInstance(): EditorInstance | undefined {
+  const id = tabs.activeTabId
+  return id ? editorInstances.get(id) : undefined
+}
+
+function applySearchState(state: SearchState | undefined): void {
+  if (!state) return
+  searchTotal.value = state.total
+  searchCurrent.value = state.current
+}
+
+function openSearch(): void {
+  const tab = tabs.activeTab
+  if (!tab || tab.loading) return
+  searchVisible.value = true
+  nextTick(() => searchBarRef.value?.focus())
+}
+
+function onSearchFind(query: string, caseSensitive: boolean): void {
+  applySearchState(activeInstance()?.searchUpdate(query, caseSensitive))
+}
+
+function onSearchNext(): void {
+  applySearchState(activeInstance()?.searchNext())
+}
+
+function onSearchPrev(): void {
+  applySearchState(activeInstance()?.searchPrev())
+}
+
+function onSearchReplace(replacement: string): void {
+  applySearchState(activeInstance()?.searchReplace(replacement))
+}
+
+function onSearchReplaceAll(replacement: string): void {
+  applySearchState(activeInstance()?.searchReplaceAll(replacement))
+}
+
+function closeSearch(): void {
+  activeInstance()?.searchClear()
+  searchVisible.value = false
+  searchTotal.value = 0
+  searchCurrent.value = 0
+}
+
+function onGlobalKeydown(e: KeyboardEvent): void {
+  if ((e.ctrlKey || e.metaKey) && !e.altKey && (e.key === 'f' || e.key === 'F')) {
+    const tag = (e.target as HTMLElement | null)?.tagName
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return
+    if (!tabs.activeTab || tabs.activeTab.loading) return
+    e.preventDefault()
+    openSearch()
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', onGlobalKeydown, true)
+})
+
 function onToggleMode(): void {
   const tab = tabs.activeTab
   if (!tab) return
+  closeSearch()
   flushActive()
   tabs.toggleMode(tab.id)
 }
@@ -90,6 +173,19 @@ defineExpose({ flushActive, flushTab, flushAll, jumpTo })
 
 <template>
   <div class="editor-area">
+    <SearchReplaceBar
+      v-if="searchVisible"
+      ref="searchBarRef"
+      :total="searchTotal"
+      :current="searchCurrent"
+      :offset-top="searchOffsetTop"
+      @find="onSearchFind"
+      @find-next="onSearchNext"
+      @find-prev="onSearchPrev"
+      @replace="onSearchReplace"
+      @replace-all="onSearchReplaceAll"
+      @close="closeSearch"
+    />
     <template v-for="tab in tabs.tabs" :key="tab.id">
       <TiptapEditor
         v-if="!tab.loading && tab.mode === 'wysiwyg'"
@@ -134,6 +230,7 @@ defineExpose({ flushActive, flushTab, flushAll, jumpTo })
 .editor-area {
   flex: 1;
   min-width: 0;
+  position: relative;
   display: flex;
   flex-direction: column;
   overflow: hidden;

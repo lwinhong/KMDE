@@ -1,16 +1,18 @@
 <script setup lang="ts">
-import { computed, onMounted, provide, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onScopeDispose, provide, reactive, ref, watch } from 'vue'
 import { NDropdown, NModal, NInput, NButton, useMessage } from 'naive-ui'
 import type { DropdownOption } from 'naive-ui'
 import { useI18n } from 'vue-i18n'
 import type { FileNode } from '@shared/types'
 import { useWorkspaceStore } from '../../stores/workspace.store'
 import { useSettingsStore } from '../../stores/settings.store'
-import { dirname, joinPath } from '../../stores/pathUtils'
-import FileTreeNode, { type TreeController } from './FileTreeNode.vue'
+import { dirname, joinPath, relativeTo } from '../../stores/pathUtils'
+import { useFileTree } from '../../composables/useFileTree'
+import FileTreeNode from './FileTreeNode.vue'
 
 const emit = defineEmits<{
   (e: 'open-file', path: string): void
+  (e: 'close-folder'): void
 }>()
 
 const workspace = useWorkspaceStore()
@@ -18,59 +20,21 @@ const settings = useSettingsStore()
 const message = useMessage()
 const { t } = useI18n()
 
-const rootChildren = ref<FileNode[]>([])
-const expandedDirs = reactive(new Set<string>())
-const loadingDirs = reactive(new Set<string>())
-const childrenCache = reactive(new Map<string, FileNode[]>())
-
-const controller: TreeController = {
-  expandedDirs,
-  loadingDirs,
-  childrenCache,
-  toggleNode: async (node: FileNode): Promise<void> => {
-    if (!node.isDir) return
-    if (expandedDirs.has(node.path)) {
-      expandedDirs.delete(node.path)
-      return
-    }
-    expandedDirs.add(node.path)
-    if (!childrenCache.has(node.path)) {
-      loadingDirs.add(node.path)
-      try {
-        const nodes = await window.kmde.listDir(node.path)
-        childrenCache.set(node.path, nodes)
-      } catch (err) {
-        message.error(t('sidebar.readDirFailed', { msg: err instanceof Error ? err.message : String(err) }))
-        expandedDirs.delete(node.path)
-      } finally {
-        loadingDirs.delete(node.path)
-      }
-    }
-  }
-}
+const {
+  rootChildren, visibleRootChildren, rootLoading, hasMoreRoot, moreDirectories,
+  controller, refreshRoot, loadMore
+} = useFileTree(() => workspace.root, () => workspace.treeVersion, (err) => {
+  message.error(t('sidebar.readDirFailed', { msg: err instanceof Error ? err.message : String(err) }))
+})
 provide('fileTreeController', controller)
 
-async function refreshRoot(): Promise<void> {
-  if (!workspace.root) {
-    rootChildren.value = []
-    return
-  }
-  childrenCache.clear()
-  try {
-    rootChildren.value = await window.kmde.listDir(workspace.root)
-  } catch {
-    rootChildren.value = []
-  }
-  // reload children of every expanded dir
-  for (const dir of [...expandedDirs]) {
-    try {
-      const nodes = await window.kmde.listDir(dir)
-      childrenCache.set(dir, nodes)
-    } catch {
-      expandedDirs.delete(dir)
-    }
-  }
-}
+const moreDirectoryLabels = computed(() => moreDirectories.value.map((directory) => ({
+  ...directory,
+  label: relativeTo(directory.path, workspace.root ?? '')
+})))
+let rootGeneration = 0
+let dialogGeneration = 0
+let disposed = false
 
 async function openNode(node: FileNode): Promise<void> {
   if (node.isDir) return
@@ -119,11 +83,14 @@ async function onCtxSelect(key: string | number): Promise<void> {
   } else if (key === 'remove') {
     const ok = window.confirm(t('sidebar.deleteConfirm', { name: node.name }))
     if (!ok) return
+    const id = rootGeneration
     try {
       await window.kmde.removeEntry(node.path)
-      await refreshRoot()
+      if (!disposed && id === rootGeneration) await refreshRoot()
     } catch (err) {
-      message.error(t('sidebar.deleteFailed', { msg: err instanceof Error ? err.message : String(err) }))
+      if (!disposed && id === rootGeneration) {
+        message.error(t('sidebar.deleteFailed', { msg: err instanceof Error ? err.message : String(err) }))
+      }
     }
   }
 }
@@ -139,19 +106,33 @@ const nameDialog = reactive({
 })
 const nameInputRef = ref<InstanceType<typeof NInput> | null>(null)
 
+function resetDialogs(): void {
+  rootGeneration++
+  dialogGeneration++
+  ctxVisible.value = false
+  ctxNode.value = null
+  nameDialog.visible = false
+  nameDialog.target = null
+  nameDialog.value = ''
+  nameDialog.busy = false
+}
+
 function openNameDialog(
   title: string,
   value: string,
   mode: 'new-file' | 'new-dir' | 'rename',
   target: FileNode
 ): void {
+  const id = ++dialogGeneration
   nameDialog.title = title
   nameDialog.value = value
   nameDialog.mode = mode
   nameDialog.target = target
   nameDialog.visible = true
   nameDialog.busy = false
-  setTimeout(() => nameInputRef.value?.focus(), 80)
+  void nextTick(() => {
+    if (!disposed && id === dialogGeneration && nameDialog.visible) nameInputRef.value?.focus()
+  })
 }
 
 function newFileAtRoot(): void {
@@ -168,52 +149,45 @@ function newFileAtRoot(): void {
 async function confirmNameDialog(): Promise<void> {
   const { mode, target, value } = nameDialog
   const name = value.trim()
-  if (!name || !target) return
+  if (!name || !target || nameDialog.busy || !nameDialog.visible) return
   if (/[\\/:*?"<>|]/.test(name)) {
     message.error(t('sidebar.illegalNameChars', { chars: '\\ / : * ? " < > |' }))
     return
   }
+  const rootId = rootGeneration
+  const dialogId = dialogGeneration
+  const current = () => !disposed && rootId === rootGeneration && dialogId === dialogGeneration
   nameDialog.busy = true
   try {
     if (mode === 'new-file' || mode === 'new-dir') {
       const parentDir = target.isDir ? target.path : dirname(target.path)
       await window.kmde.createEntry(parentDir, name, mode === 'new-file' ? 'file' : 'dir')
-      expandedDirs.add(parentDir)
+      if (!current()) return
+      if (parentDir !== workspace.root) controller.expandedDirs.add(parentDir)
       await refreshRoot()
     } else {
       const parentDir = dirname(target.path)
       const newPath = joinPath(parentDir, name)
       if (newPath !== target.path) {
         await window.kmde.renameEntry(target.path, newPath)
+        if (!current()) return
         await refreshRoot()
       }
     }
-    nameDialog.visible = false
+    if (current()) nameDialog.visible = false
   } catch (err) {
-    message.error(t('sidebar.operationFailed', { msg: err instanceof Error ? err.message : String(err) }))
+    if (current()) {
+      message.error(t('sidebar.operationFailed', { msg: err instanceof Error ? err.message : String(err) }))
+    }
   } finally {
-    nameDialog.busy = false
+    if (current()) nameDialog.busy = false
   }
 }
 
-watch(
-  () => workspace.treeVersion,
-  () => {
-    void refreshRoot()
-  }
-)
-
-watch(
-  () => workspace.root,
-  () => {
-    expandedDirs.clear()
-    childrenCache.clear()
-    void refreshRoot()
-  }
-)
-
-onMounted(() => {
-  void refreshRoot()
+watch(() => workspace.root, resetDialogs, { flush: 'sync' })
+onScopeDispose(() => {
+  disposed = true
+  resetDialogs()
 })
 </script>
 
@@ -232,6 +206,18 @@ onMounted(() => {
             <path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6" />
           </svg>
         </button>
+        <button
+          v-if="workspace.root"
+          type="button"
+          class="filetree-action filetree-close"
+          :title="$t('sidebar.closeWorkspace')"
+          :aria-label="$t('sidebar.closeWorkspace')"
+          @click="emit('close-folder')"
+        >
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="m6 6 12 12M18 6 6 18" />
+          </svg>
+        </button>
         <button class="filetree-action" :title="$t('sidebar.collapse')" @click="settings.toggleSidebar()">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M15 18l-6-6 6-6" />
@@ -239,17 +225,32 @@ onMounted(() => {
         </button>
       </span>
     </div>
-    <div class="filetree-body">
+    <div class="filetree-body" :aria-busy="rootLoading">
       <template v-if="workspace.root">
+        <div v-if="rootLoading" class="filetree-status" role="status">{{ $t('sidebar.loading') }}</div>
+        <div v-else-if="workspace.indexing" class="filetree-status" role="status">{{ $t('sidebar.indexing') }}</div>
         <FileTreeNode
-          v-for="node in rootChildren"
+          v-for="node in visibleRootChildren"
           :key="node.path"
           :node="node"
           :depth="0"
           @open="openNode"
           @contextmenu="onContextMenu"
         />
-        <div v-if="rootChildren.length === 0" class="filetree-empty">{{ $t('sidebar.emptyFolder') }}</div>
+        <button v-if="hasMoreRoot" type="button" class="filetree-load-more" @click="loadMore()">
+          {{ $t('sidebar.loadMore') }}
+        </button>
+        <button
+          v-for="directory in moreDirectoryLabels"
+          :key="directory.path"
+          type="button"
+          class="filetree-load-more"
+          :title="directory.path"
+          @click="loadMore(directory.path)"
+        >
+          {{ $t('sidebar.loadMore') }} · {{ directory.label }} ({{ directory.remaining }})
+        </button>
+        <div v-if="!rootLoading && rootChildren.length === 0" class="filetree-empty">{{ $t('sidebar.emptyFolder') }}</div>
       </template>
       <div v-else class="filetree-empty">{{ $t('sidebar.noWorkspace') }}<br />{{ $t('sidebar.noWorkspaceHint') }}</div>
     </div>
@@ -319,7 +320,34 @@ onMounted(() => {
 
 .filetree-actions {
   display: inline-flex;
+  flex-shrink: 0;
   gap: 2px;
+}
+
+.filetree-status {
+  padding: 6px 12px;
+  color: var(--kme-text-3);
+  font-size: 12px;
+}
+
+.filetree-load-more {
+  display: block;
+  max-width: calc(100% - 24px);
+  margin: 6px 12px;
+  padding: 5px 8px;
+  border: 1px solid var(--kme-border-light);
+  border-radius: var(--kme-radius-sm);
+  background: transparent;
+  color: var(--kme-text-2);
+  font-size: 12px;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.filetree-load-more:hover {
+  background: var(--kme-bg-hover);
 }
 
 .filetree-action {
