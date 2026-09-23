@@ -533,7 +533,7 @@ defineExpose({
 
 .tiptap-editor-page {
   margin: 0 auto;
-  max-width: 880px;
+  max-width: 1080px;
   min-width: 820px;
   padding: 24px 32px 120px;
 }

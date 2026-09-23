@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import type { OutlineItem } from '@shared/types'
 import { useSettingsStore } from '../../stores/settings.store'
 
@@ -20,6 +20,19 @@ const visibleItems = computed(() => props.items.slice(0, 200))
 function levelIndent(level: number): string {
   return `${(level - 1) * 12 + 8}px`
 }
+
+const bodyRef = ref<HTMLElement | null>(null)
+
+watch(
+  () => props.activeId,
+  () => {
+    if (!props.activeId || !bodyRef.value) return
+    nextTick(() => {
+      const el = bodyRef.value?.querySelector<HTMLElement>('.outline-item.is-active')
+      el?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+    })
+  },
+)
 </script>
 
 <template>
@@ -32,7 +45,7 @@ function levelIndent(level: number): string {
         </svg>
       </button>
     </div>
-    <div class="outline-body">
+    <div ref="bodyRef" class="outline-body">
       <template v-if="visibleItems.length > 0">
         <div
           v-for="item in visibleItems"

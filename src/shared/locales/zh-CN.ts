@@ -203,6 +203,9 @@ export default {
     mermaidRenderFailed: 'Mermaid 渲染失败',
     viewSourceCode: '查看源码',
     emptyDiagram: '（空图表，双击此处编辑源码）',
+    zoomIn: '放大',
+    zoomOut: '缩小',
+    zoomReset: '重置缩放',
     autosaveFailed: '自动保存失败',
     placeholderBody: "输入 '/' 获取命令，或直接开始输入..."
   },

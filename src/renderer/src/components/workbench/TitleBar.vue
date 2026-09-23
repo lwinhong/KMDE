@@ -188,8 +188,8 @@ function onMenuSelect(key: string | number): void {
         @click="settings.toggleSidebar()"
       >
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
-          <rect x="3" y="5" width="18" height="14" rx="1.5" />
-          <line x1="9" y1="5" x2="9" y2="19" />
+          <rect x="3" y="5" width="18" height="16" rx="1.5" />
+          <line x1="9" y1="5" x2="9" y2="21" />
         </svg>
       </button>
       <button
@@ -199,8 +199,8 @@ function onMenuSelect(key: string | number): void {
         @click="settings.toggleOutline()"
       >
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
-          <rect x="3" y="5" width="18" height="14" rx="1.5" />
-          <line x1="15" y1="5" x2="15" y2="19" />
+          <rect x="3" y="5" width="18" height="16" rx="1.5" />
+          <line x1="15" y1="5" x2="15" y2="21" />
         </svg>
       </button>
     </div>
@@ -305,9 +305,11 @@ function onMenuSelect(key: string | number): void {
 
 .title-bar-toggles {
   display: flex;
-  align-items: stretch;
+  align-items: center;
+  justify-content: center;
   padding-right: 8px;
   margin-right: 8px;
+  gap: 4px;
   -webkit-app-region: no-drag;
   position: relative;
 }
@@ -328,13 +330,14 @@ function onMenuSelect(key: string | number): void {
   border: none;
   background: transparent;
   color: var(--kme-text-2);
-  width: 32px;
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: default;
   border-radius: var(--kme-radius-sm);
-  margin: 4px 1px;
+  /* margin: 4px 1px; */
   transition: background 0.15s, color 0.15s;
 }
 

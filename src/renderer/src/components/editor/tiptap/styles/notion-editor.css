@@ -140,9 +140,9 @@
 }
 
 .notion-editor-prosemirror pre {
-  background: #000000;
+  background: var(--kme-code-bg);
   border-radius: 8px;
-  color: #ffffff;
+  color: var(--kme-code-text);
   font-family: 'JetBrainsMono', monospace;
   margin: 1rem 0;
   padding: 1rem;
@@ -170,33 +170,48 @@
   margin: 1.5rem 0;
 }
 
-/* Table styles */
+/* Table styles (GitHub/Typora-like) */
 .notion-editor-prosemirror table {
-  border-collapse: collapse;
-  margin: 1rem 0;
-  overflow: hidden;
+  border-collapse: separate;
+  border-spacing: 0;
   table-layout: fixed;
   width: 100%;
+  margin: 1rem 0;
+  background: var(--kme-bg);
+  border: 1px solid var(--kme-border);
+  border-radius: var(--kme-radius-md);
+  overflow: hidden;
 }
 
 .notion-editor-prosemirror td,
 .notion-editor-prosemirror th {
-  border: 1px solid var(--kme-border);
+  border-right: 1px solid var(--kme-border-light);
+  border-bottom: 1px solid var(--kme-border-light);
   box-sizing: border-box;
   min-width: 1em;
-  padding: 6px 8px;
+  padding: 7px 12px;
   position: relative;
   vertical-align: top;
 }
 
+.notion-editor-prosemirror th:last-child,
+.notion-editor-prosemirror td:last-child {
+  border-right: none;
+}
+
+.notion-editor-prosemirror tr:last-child td {
+  border-bottom: none;
+}
+
 .notion-editor-prosemirror th {
-  background-color: var(--kme-bg-soft);
+  background: var(--kme-code-bg);
   font-weight: 600;
   text-align: left;
+  border-bottom: 1px solid var(--kme-border);
 }
 
 .notion-editor-prosemirror .selectedCell::after {
-  background: rgba(61, 37, 20, 0.08);
+  background: var(--kme-primary-weak);
   content: '';
   left: 0;
   right: 0;
@@ -253,8 +268,8 @@
 
 /* Mention styles */
 .notion-editor-prosemirror .mention {
-  background: #e0e7ff;
-  color: #3730a3;
+  background: var(--kme-primary-weak);
+  color: var(--kme-primary);
   padding: 0.125rem 0.375rem;
   border-radius: 0.375rem;
   font-weight: 500;
@@ -262,20 +277,20 @@
 }
 
 .notion-editor-prosemirror .mention:hover {
-  background: #c7d2fe;
+  background: var(--kme-primary-weak-hover);
 }
 
 /* Mathematics styles */
 .notion-editor-prosemirror [data-type='block-math'] {
   margin: 1rem 0;
   padding: 0.5rem;
-  background: #f8fafc;
+  background: var(--kme-bg-inset);
   border-radius: 4px;
   text-align: center;
 }
 
 .notion-editor-prosemirror [data-type='inline-math'] {
-  background: #f1f5f9;
+  background: var(--kme-bg-inset);
   padding: 0.125rem 0.25rem;
   border-radius: 3px;
   font-family: 'Times New Roman', serif;

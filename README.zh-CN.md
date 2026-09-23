@@ -1,10 +1,10 @@
 # KMDE
 
-[![Electron](https://img.shields.io/badge/Electron-44-47848F?logo=electron&logoColor=white)](https://www.electronjs.org/)
-[![Vue](https://img.shields.io/badge/Vue-3-4FC08D?logo=vuedotjs&logoColor=white)](https://vuejs.org/)
-[![Tiptap](https://img.shields.io/badge/Tiptap-3-6A9FD8)](https://tiptap.dev/)
-[![Platform](https://img.shields.io/badge/platform-Windows%2010%20%2F%2011-0078D4?logo=windows11&logoColor=white)](https://github.com/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+![Electron](https://img.shields.io/badge/Electron-44-47848F?logo=electron&logoColor=white)
+![Vue](https://img.shields.io/badge/Vue-3-4FC08D?logo=vuedotjs&logoColor=white)
+![Tiptap](https://img.shields.io/badge/Tiptap-3-6A9FD8)
+![Platform](https://img.shields.io/badge/platform-Windows%2010%20%2F%2011-0078D4?logo=windows11&logoColor=white)
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 
 [English](README.md) | **简体中文**
 
@@ -13,6 +13,7 @@ KMDE 是一款 Typora 风格的桌面 Markdown 编辑器，基于 Electron + Vue
 ## 功能特性
 
 ### 编辑器
+
 - **双模式编辑**：所见即所得（Tiptap v3）与源码模式（CodeMirror 6），`Ctrl+/` 快速切换
 - **丰富的 Markdown 支持**：表格、任务列表、高亮、上下标、文本对齐、排版转换（Typography）、折叠块（Details）
 - **代码高亮**：基于 highlight.js / lowlight 的代码块高亮，每个代码块带复制按钮
@@ -23,6 +24,7 @@ KMDE 是一款 Typora 风格的桌面 Markdown 编辑器，基于 Electron + Vue
 - 大文件自动降级：超过 2MB 的文件强制使用源码模式
 
 ### 工作区
+
 - **文件树侧边栏**：打开文件夹作为工作区，支持新建 / 重命名 / 删除文件与文件夹
 - **多标签页**：脏状态标记、未保存关闭确认
 - **会话恢复**：重启后自动恢复所有打开的标签页（含未保存草稿与未命名文件）；会话快照以原子写入方式保存到 `%APPDATA%/kmde/session/`，未保存内容另有 `drafts/` 草稿备份
@@ -32,11 +34,13 @@ KMDE 是一款 Typora 风格的桌面 Markdown 编辑器，基于 Electron + Vue
 - **快速打开**：`Ctrl+P` 模糊搜索打开文件；`Ctrl+Shift+P` 命令面板
 
 ### 导出
+
 - **HTML 导出**：生成独立 HTML，配套 `KMDE-assets/` 目录（KaTeX 字体、hljs 主题、mermaid），完全离线可用
 - **PDF 导出**：基于同一渲染管线输出 PDF
 - 导出资源由 `scripts/prepare-export-assets.mjs` 从本地依赖提取，无需网络
 
 ### 桌面集成
+
 - 无边框窗口 + 自定义标题栏（最小化 / 最大化 / 关闭）
 - **中英双语界面**：通过 `查看 → 语言` 在 简体中文 / English 间即时切换，原生菜单、对话框与渲染层界面同步生效
 - 单实例锁：重复打开或双击 `.md` 文件时聚焦已有窗口并新开标签页
@@ -47,32 +51,36 @@ KMDE 是一款 Typora 风格的桌面 Markdown 编辑器，基于 Electron + Vue
 
 ## 快捷键
 
-| 快捷键 | 功能 |
-| --- | --- |
-| `Ctrl+N` | 新建文件 |
-| `Ctrl+O` / `Ctrl+Shift+O` | 打开文件 / 打开文件夹 |
-| `Ctrl+S` / `Ctrl+Shift+S` | 保存 / 另存为 |
-| `Ctrl+Shift+E` | 导出 |
-| `Ctrl+W` | 关闭标签页 |
-| `Ctrl+/` | 切换 所见即所得 / 源码模式 |
-| `Ctrl+\` | 切换侧边栏 |
-| `Ctrl+Shift+U` | 切换大纲面板 |
-| `F11` | 切换深 / 浅色主题 |
-| `Ctrl+P` | 快速打开（模糊文件搜索） |
-| `Ctrl+Shift+P` | 命令面板 |
-| `Ctrl+R` | 重新加载 |
-| `F12` | 开发者工具 |
+
+| 快捷键                       | 功能              |
+| ------------------------- | --------------- |
+| `Ctrl+N`                  | 新建文件            |
+| `Ctrl+O` / `Ctrl+Shift+O` | 打开文件 / 打开文件夹    |
+| `Ctrl+S` / `Ctrl+Shift+S` | 保存 / 另存为        |
+| `Ctrl+Shift+E`            | 导出              |
+| `Ctrl+W`                  | 关闭标签页           |
+| `Ctrl+/`                  | 切换 所见即所得 / 源码模式 |
+| `Ctrl+\`                  | 切换侧边栏           |
+| `Ctrl+Shift+U`            | 切换大纲面板          |
+| `F11`                     | 切换深 / 浅色主题      |
+| `Ctrl+P`                  | 快速打开（模糊文件搜索）    |
+| `Ctrl+Shift+P`            | 命令面板            |
+| `Ctrl+R`                  | 重新加载            |
+| `F12`                     | 开发者工具           |
+
 
 ## 技术栈
 
-| 层 | 技术 |
-| --- | --- |
-| 框架 | Electron 44 + electron-vite 5 |
-| 渲染层 | Vue 3.5 + Pinia 4 + Naive UI 2 + vue-i18n 11 |
-| 富文本 | Tiptap 3（Markdown 序列化） |
-| 源码编辑 | CodeMirror 6 |
-| 文件监听 | chokidar 5 |
-| 渲染资源 | KaTeX、highlight.js、lowlight、mermaid |
+
+| 层    | 技术                                           |
+| ---- | -------------------------------------------- |
+| 框架   | Electron 44 + electron-vite 5                |
+| 渲染层  | Vue 3.5 + Pinia 4 + Naive UI 2 + vue-i18n 11 |
+| 富文本  | Tiptap 3（Markdown 序列化）                       |
+| 源码编辑 | CodeMirror 6                                 |
+| 文件监听 | chokidar 5                                   |
+| 渲染资源 | KaTeX、highlight.js、lowlight、mermaid          |
+
 
 ## 快速开始
 
@@ -165,3 +173,4 @@ resources/
 - 文件读取上限 64MB，工作区目录树忽略 `node_modules`、`.git`、`dist`、`out` 等目录
 - 生产环境注入 CSP 响应头，限制脚本 / 样式 / 图片来源
 - 自定义 `kmd-file://` 协议用于安全加载本地图片资源
+

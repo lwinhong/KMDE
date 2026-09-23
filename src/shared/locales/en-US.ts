@@ -205,6 +205,9 @@ export default {
     mermaidRenderFailed: 'Mermaid render failed',
     viewSourceCode: 'View source',
     emptyDiagram: '(Empty diagram, double-click to edit source)',
+    zoomIn: 'Zoom in',
+    zoomOut: 'Zoom out',
+    zoomReset: 'Reset zoom',
     autosaveFailed: 'Autosave failed',
     placeholderBody: "Type '/' for commands, or just start typing..."
   },

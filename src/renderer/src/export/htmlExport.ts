@@ -78,10 +78,11 @@ pre {
   line-height: 1.55;
 }
 pre code { background: transparent; padding: 0; font-size: 0.85em; }
-table { border-collapse: collapse; margin: 1em 0; display: block; overflow-x: auto; max-width: 100%; }
-th, td { border: 1px solid var(--border); padding: 7px 12px; }
+table { border-collapse: separate; border-spacing: 0; margin: 1em 0; display: block; width: max-content; max-width: 100%; overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; }
+th, td { border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 6px 13px; }
+th:last-child, td:last-child { border-right: none; }
+tr:last-child td { border-bottom: none; }
 th { background: var(--code-bg); font-weight: 600; }
-tr:nth-child(2n) td { background: #fbfcfd; }
 hr { border: none; border-top: 2px solid var(--border); margin: 2em 0; }
 details { border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; margin: 0.8em 0; }
 details summary { font-weight: 600; cursor: pointer; }

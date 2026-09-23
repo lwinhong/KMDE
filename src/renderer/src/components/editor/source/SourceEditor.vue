@@ -14,10 +14,10 @@ import {
 } from '@codemirror/view'
 import { EditorState, Compartment, EditorSelection, Transaction, type Extension } from '@codemirror/state'
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands'
-import { foldGutter, indentOnInput, bracketMatching, foldKeymap, syntaxHighlighting, defaultHighlightStyle } from '@codemirror/language'
+import { foldGutter, indentOnInput, bracketMatching, foldKeymap, syntaxHighlighting, defaultHighlightStyle, HighlightStyle } from '@codemirror/language'
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown'
 import { languages } from '@codemirror/language-data'
-import { oneDark } from '@codemirror/theme-one-dark'
+import { tags as t } from '@lezer/highlight'
 import { SearchQuery, search, setSearchQuery } from '@codemirror/search'
 import type { EditorSelectionState, OutlineItem } from '@shared/types'
 import type { EditorTab } from '@/stores/tabs.store'
@@ -42,6 +42,39 @@ let syncTimer: ReturnType<typeof setTimeout> | null = null
 const themeComp = new Compartment()
 const editableComp = new Compartment()
 
+const kmdeDarkHighlight = HighlightStyle.define([
+  { tag: t.comment, color: '#8b949e', fontStyle: 'italic' },
+  { tag: t.lineComment, color: '#8b949e', fontStyle: 'italic' },
+  { tag: t.blockComment, color: '#8b949e', fontStyle: 'italic' },
+  { tag: t.meta, color: '#8b949e' },
+  { tag: t.keyword, color: '#ff7b72' },
+  { tag: t.operator, color: '#ff7b72' },
+  { tag: t.atom, color: '#79c0ff' },
+  { tag: t.bool, color: '#79c0ff' },
+  { tag: t.number, color: '#79c0ff' },
+  { tag: t.string, color: '#a5d6ff' },
+  { tag: t.regexp, color: '#a5d6ff' },
+  { tag: t.variableName, color: '#c9d1d9' },
+  { tag: t.definition(t.variableName), color: '#79c0ff' },
+  { tag: t.function(t.variableName), color: '#d2a8ff' },
+  { tag: t.propertyName, color: '#79c0ff' },
+  { tag: t.attributeName, color: '#79c0ff' },
+  { tag: t.typeName, color: '#d2a8ff' },
+  { tag: t.className, color: '#7ee787' },
+  { tag: t.tagName, color: '#7ee787' },
+  { tag: t.heading, color: '#79c0ff', fontWeight: 'bold' },
+  { tag: t.link, color: '#79c0ff' },
+  { tag: t.url, color: '#a5d6ff' },
+  { tag: t.emphasis, color: '#c9d1d9', fontStyle: 'italic' },
+  { tag: t.strong, color: '#c9d1d9', fontWeight: 'bold' },
+  { tag: t.list, color: '#ff7b72' },
+  { tag: t.quote, color: '#8b949e' },
+  { tag: t.separator, color: '#8b949e' },
+  { tag: t.invalid, color: '#f85149' },
+  { tag: t.content, color: '#c9d1d9' },
+  { tag: t.punctuation, color: '#c9d1d9' }
+])
+
 watch(() => props.locked, (locked) => {
   view?.dispatch({ effects: editableComp.reconfigure([
     EditorView.editable.of(!locked), EditorState.readOnly.of(locked)
@@ -51,13 +84,13 @@ watch(() => props.locked, (locked) => {
 const kmdeCmTheme = EditorView.theme({
   '&': {
     height: '100%',
-    fontSize: '13.5px',
+    fontSize: '14px',
     backgroundColor: 'var(--kme-bg)',
     color: 'var(--kme-text-1)'
   },
   '.cm-scroller': {
     fontFamily: "'JetBrains Mono', 'Fira Code', Consolas, 'Courier New', monospace",
-    lineHeight: '1.75'
+    lineHeight: '1.7'
   },
   '.cm-content': {
     caretColor: 'var(--kme-primary)',
@@ -79,7 +112,9 @@ const kmdeCmTheme = EditorView.theme({
 })
 
 function buildExtensions(): Extension[] {
-  const highlight = settings.isDark ? oneDark : syntaxHighlighting(defaultHighlightStyle, { fallback: true })
+  const highlight = settings.isDark
+    ? syntaxHighlighting(kmdeDarkHighlight)
+    : syntaxHighlighting(defaultHighlightStyle, { fallback: true })
   return [
     lineNumbers(),
     highlightActiveLineGutter(),
@@ -342,7 +377,9 @@ watch(
     if (!view) return
     view.dispatch({
       effects: themeComp.reconfigure(
-        isDark ? oneDark : syntaxHighlighting(defaultHighlightStyle, { fallback: true })
+        isDark
+          ? syntaxHighlighting(kmdeDarkHighlight)
+          : syntaxHighlighting(defaultHighlightStyle, { fallback: true })
       )
     })
   }

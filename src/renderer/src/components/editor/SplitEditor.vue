@@ -204,6 +204,7 @@ defineExpose({
     </div>
     <Resizer side="left" @resize="onPaneResize" />
     <div ref="srcPaneRef" class="split-pane split-pane-source">
+      <div class="split-source-header"></div>
       <SourceEditor
         ref="sourceRef"
         :tab="tab"
@@ -233,6 +234,40 @@ defineExpose({
 /* 右侧源码区与左侧工具栏（40px）对齐，两侧内容起点一致。 */
 .split-pane-source {
   flex: 1 1 0;
-  padding-top: 40px;
+  display: flex;
+  flex-direction: column;
+}
+
+.split-source-header {
+  flex-shrink: 0;
+  height: 40px;
+  background: var(--kme-glass-bg);
+  backdrop-filter: blur(var(--kme-blur)) saturate(1.4);
+  -webkit-backdrop-filter: blur(var(--kme-blur)) saturate(1.4);
+  box-shadow: var(--kme-shadow-sm);
+  z-index: 50;
+}
+
+.split-pane-source :deep(.source-editor) {
+  flex: 1;
+  min-height: 0;
+}
+
+/* 分屏中间可见分割线，参考侧边栏竖线样式 */
+.split-editor :deep(.resizer)::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  transform: translateX(-50%);
+  background: var(--kme-border-light);
+  transition: background 0.15s;
+}
+
+.split-editor :deep(.resizer:hover)::before,
+.split-editor :deep(.resizer.is-dragging)::before {
+  background: transparent;
 }
 </style>

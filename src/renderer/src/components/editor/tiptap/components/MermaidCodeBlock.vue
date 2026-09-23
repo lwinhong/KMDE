@@ -26,6 +26,32 @@ const mermaidError = ref('')
 let renderTimer: ReturnType<typeof setTimeout> | null = null
 let renderSeq = 0
 
+/* ---------------------------------------------------------------
+ * mermaid 渲染服务（模块级）
+ * mermaid 是全局单例：并发的 initialize/render 会互相打断（典型
+ * 表现：打开文档时所有图表同时首次渲染导致全部空白，切换一次
+ * 图表/源码后单个重渲染才出现）。因此：
+ *  1. 模块只动态 import 一次，全局复用；
+ *  2. 所有渲染请求进入串行队列，逐个执行；
+ *  3. 渲染 ID 全局递增，避免多个节点视图产生相同 ID；
+ *  4. initialize 仅在主题真正变化时调用（且在队列内执行）。
+ * --------------------------------------------------------------- */
+let mermaidModule: Promise<typeof import('mermaid')> | null = null
+let renderChain: Promise<unknown> = Promise.resolve()
+let mermaidIdSeq = 0
+let mermaidTheme: string | null = null
+
+function loadMermaid(): Promise<typeof import('mermaid')> {
+  if (!mermaidModule) mermaidModule = import('mermaid')
+  return mermaidModule
+}
+
+function enqueueRender(task: () => Promise<void>): Promise<void> {
+  const run = renderChain.then(task, task)
+  renderChain = run.catch(() => undefined)
+  return run
+}
+
 async function renderMermaid(): Promise<void> {
   if (!isMermaid.value || !previewMode.value) return
   const code = props.node.textContent
@@ -35,29 +61,37 @@ async function renderMermaid(): Promise<void> {
     return
   }
   const seq = ++renderSeq
-  try {
-    const mermaid = (await import('mermaid')).default
-    mermaid.initialize({
-      startOnLoad: false,
-      theme: settings.isDark ? 'dark' : 'default',
-      securityLevel: 'loose'
-    })
-    const result = await mermaid.render(`kme-mermaid-${seq}`, code)
-    if (seq === renderSeq) {
-      svg.value = result.svg
-      mermaidError.value = ''
+  await enqueueRender(async () => {
+    if (seq !== renderSeq) return
+    try {
+      const mermaid = (await loadMermaid()).default
+      const theme = settings.isDark ? 'dark' : 'default'
+      if (theme !== mermaidTheme) {
+        mermaid.initialize({
+          startOnLoad: false,
+          theme,
+          securityLevel: 'loose'
+        })
+        mermaidTheme = theme
+      }
+      const result = await mermaid.render(`kme-mermaid-${++mermaidIdSeq}`, code)
+      if (seq === renderSeq) {
+        svg.value = result.svg
+        mermaidError.value = ''
+      }
+    } catch (err) {
+      if (seq === renderSeq) {
+        svg.value = ''
+        mermaidError.value = err instanceof Error ? err.message : String(err)
+      }
     }
-  } catch (err) {
-    if (seq === renderSeq) {
-      svg.value = ''
-      mermaidError.value = err instanceof Error ? err.message : String(err)
-    }
-  }
+  })
 }
 
 function scheduleRender(): void {
   if (renderTimer) clearTimeout(renderTimer)
   renderTimer = setTimeout(() => {
+    renderTimer = null
     void renderMermaid()
   }, 300)
 }
@@ -91,13 +125,50 @@ watch(
 onMounted(() => {
   if (isMermaid.value) {
     previewMode.value = true
-    void renderMermaid()
+    // 首次渲染等待节点视图真正插入文档并完成首帧布局，
+    // 避免与 EditorContent 挂载过程竞争导致渲染失败。
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        void renderMermaid()
+      })
+    })
   }
 })
 
 onBeforeUnmount(() => {
   if (renderTimer) clearTimeout(renderTimer)
 })
+
+/* ------------------------- zoom ------------------------- */
+
+const MIN_ZOOM = 0.25
+const MAX_ZOOM = 4
+const ZOOM_STEP = 1.25
+const zoom = ref(1)
+
+function zoomBy(factor: number): void {
+  zoom.value = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.round(zoom.value * factor * 100) / 100))
+}
+
+function zoomIn(): void {
+  zoomBy(ZOOM_STEP)
+}
+
+function zoomOut(): void {
+  zoomBy(1 / ZOOM_STEP)
+}
+
+function resetZoom(): void {
+  zoom.value = 1
+}
+
+function onPreviewWheel(event: WheelEvent): void {
+  if (!event.ctrlKey && !event.metaKey) return
+  event.preventDefault()
+  zoomBy(event.deltaY < 0 ? ZOOM_STEP : 1 / ZOOM_STEP)
+}
+
+/* ------------------------- copy ------------------------- */
 
 let copyTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -166,14 +237,36 @@ async function handleCopy(): Promise<void> {
       class="kme-mermaid-preview"
       :class="{ 'has-error': !!mermaidError }"
       @dblclick="previewMode = false"
+      @wheel="onPreviewWheel"
     >
-      <div v-if="svg" class="kme-mermaid-svg" v-html="svg"></div>
+      <div v-if="svg" class="kme-mermaid-svg" :style="{ zoom: String(zoom) }" v-html="svg"></div>
       <div v-if="mermaidError" class="kme-mermaid-error">
         <div class="kme-mermaid-error-title">{{ $t('editor.mermaidRenderFailed') }}</div>
         <pre class="kme-mermaid-error-detail">{{ mermaidError }}</pre>
         <button class="kme-codeblock-btn" @click="previewMode = false">{{ $t('editor.viewSourceCode') }}</button>
       </div>
       <div v-if="!svg && !mermaidError" class="kme-mermaid-placeholder">{{ $t('editor.emptyDiagram') }}</div>
+      <div v-if="svg" class="kme-mermaid-zoom" contenteditable="false" @dblclick.stop>
+        <button
+          class="kme-mz-btn"
+          :title="$t('editor.zoomOut')"
+          :disabled="zoom <= MIN_ZOOM"
+          @click="zoomOut"
+        >
+          −
+        </button>
+        <button class="kme-mz-label" :title="$t('editor.zoomReset')" @click="resetZoom">
+          {{ Math.round(zoom * 100) }}%
+        </button>
+        <button
+          class="kme-mz-btn"
+          :title="$t('editor.zoomIn')"
+          :disabled="zoom >= MAX_ZOOM"
+          @click="zoomIn"
+        >
+          ＋
+        </button>
+      </div>
     </div>
     <pre v-show="!(isMermaid && previewMode)" class="kme-codeblock-pre"><code><node-view-content /></code></pre>
   </node-view-wrapper>
@@ -248,12 +341,13 @@ async function handleCopy(): Promise<void> {
 }
 
 .kme-mermaid-preview {
+  position: relative;
   padding: 16px;
   min-height: 60px;
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow-x: auto;
+  overflow: auto;
 }
 
 .kme-mermaid-svg :deep(svg) {
@@ -266,6 +360,64 @@ async function handleCopy(): Promise<void> {
   width: 100%;
   min-height: 40px;
   color: var(--kme-text-3);
+}
+
+.kme-mermaid-zoom {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  background: var(--kme-glass-bg);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--kme-border-light);
+  border-radius: var(--kme-radius-sm);
+  box-shadow: var(--kme-shadow-xs);
+  user-select: none;
+}
+
+.kme-mz-btn {
+  min-width: 22px;
+  height: 22px;
+  padding: 0 4px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--kme-text-2);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.kme-mz-btn:hover:not(:disabled) {
+  background: var(--kme-bg-hover);
+  color: var(--kme-text-1);
+}
+
+.kme-mz-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.kme-mz-label {
+  min-width: 42px;
+  height: 22px;
+  padding: 0 4px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--kme-text-2);
+  font-size: 11px;
+  line-height: 22px;
+  text-align: center;
+  cursor: pointer;
+}
+
+.kme-mz-label:hover {
+  background: var(--kme-bg-hover);
+  color: var(--kme-text-1);
 }
 
 .kme-mermaid-error {
