@@ -49,7 +49,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch, h } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch, h } from 'vue'
 import { NPopover } from 'naive-ui'
 import { ToolbarButton, ToolbarSeparator } from './primitives'
 import UndoRedoButtons from './UndoRedoButtons.vue'
@@ -132,8 +132,10 @@ const computeVisibleCount = () => {
   const container = toolbarRef.value
   if (!container) return
   const containerWidth = container.clientWidth
-  const widths = itemRefs.value.map((ref) => ref?.offsetWidth || 0)
-  if (widths.length === 0) return
+  // v-show 隐藏的页签尺寸为零，保留上次有效布局，避免切回时先折叠再展开。
+  if (containerWidth <= 0) return
+  const widths = items.value.map((_, index) => itemRefs.value[index]?.offsetWidth || 0)
+  if (widths.length === 0 || widths.some((width) => width <= 0)) return
 
   const totalWidth = widths.reduce((a, b) => a + b, 0) + (widths.length - 1) * GAP
   if (totalWidth <= containerWidth) {
@@ -155,26 +157,17 @@ const computeVisibleCount = () => {
   visibleCount.value = count
 }
 
-let rafId = null
-const measure = () => {
-  if (rafId) cancelAnimationFrame(rafId)
-  rafId = requestAnimationFrame(() => {
-    rafId = null
-    computeVisibleCount()
-  })
-}
-
 let ro = null
 onMounted(() => {
   computeVisibleCount()
-  ro = new ResizeObserver(measure)
+  // ResizeObserver 已在绘制前批量通知；直接重算，避免首次显示或尺寸变化时滞后一帧。
+  ro = new ResizeObserver(computeVisibleCount)
   if (toolbarRef.value) ro.observe(toolbarRef.value)
 })
 
 onBeforeUnmount(() => {
   ro?.disconnect()
-  if (rafId) cancelAnimationFrame(rafId)
 })
 
-watch(() => items.value.length, () => nextTick(measure))
+watch(() => items.value.length, computeVisibleCount, { flush: 'post' })
 </script>
