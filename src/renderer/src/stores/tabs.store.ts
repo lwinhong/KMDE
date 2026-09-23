@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { basename, dirname, extname } from './pathUtils'
 import { MAX_WYSIWYG_FILE_SIZE } from '@shared/types'
-import type { EditorMode, EditorSession, SessionSaveOptions, SessionTab } from '@shared/types'
+import type { EditorMode, EditorSelectionState, EditorSession, SessionSaveOptions, SessionTab } from '@shared/types'
 import { useSettingsStore } from './settings.store'
 import { t } from '@/i18n'
 
@@ -59,7 +59,8 @@ export const useTabsStore = defineStore('tabs', {
     sessionSnapshot(): EditorSession {
       const tabs = this.tabs.filter((tab) => !tab.loading).map((tab): SessionTab => ({
         id: tab.id, path: tab.path, fileName: tab.fileName, markdown: tab.markdown,
-        dirty: tab.dirty, mode: tab.mode, savedMtimeMs: tab.savedMtimeMs, deleted: tab.deleted
+        dirty: tab.dirty, mode: tab.mode, savedMtimeMs: tab.savedMtimeMs, deleted: tab.deleted,
+        ...(tab.selection ? { selection: { ...tab.selection } } : {})
       }))
       return {
         version: 1, tabs, untitledSeq: this.untitledSeq,
@@ -95,6 +96,7 @@ export const useTabsStore = defineStore('tabs', {
       for (const saved of session?.tabs ?? []) {
         if (saved.path && restored.some((tab) => tab.path && pathKey(tab.path) === pathKey(saved.path!))) continue
         const tab: EditorTab = { ...saved, reloadToken: 0, loading: false }
+        if (saved.selection) tab.selection = { ...saved.selection }
         if (tab.path) {
           try {
             const disk = await window.kmde.readFile(tab.path)
@@ -112,6 +114,7 @@ export const useTabsStore = defineStore('tabs', {
           }
         }
         if (tab.markdown.length > MAX_WYSIWYG_FILE_SIZE) tab.mode = 'source'
+        if (tab.selection && tab.selection.mode !== tab.mode) delete tab.selection
         restored.push(tab)
       }
       this.tabs = restored
@@ -141,6 +144,14 @@ export const useTabsStore = defineStore('tabs', {
         tab.markdown = markdown
         tab.dirty = true
       }
+    },
+
+    updateTabSelection(id: string, selection: EditorSelectionState): void {
+      const tab = this.tabs.find((t) => t.id === id)
+      if (!tab || tab.loading || selection.mode !== tab.mode) return
+      const previous = tab.selection
+      if (previous?.mode === selection.mode && previous.anchor === selection.anchor && previous.head === selection.head) return
+      tab.selection = { ...selection }
     },
 
     async openPath(path: string): Promise<EditorTab | null> {
@@ -337,11 +348,14 @@ export const useTabsStore = defineStore('tabs', {
       const tab = this.tabs.find((t) => t.id === id)
       if (!tab) return
       tab.mode = tab.mode === 'wysiwyg' ? 'source' : 'wysiwyg'
+      delete tab.selection
     },
 
     setMode(id: string, mode: EditorMode): void {
       const tab = this.tabs.find((t) => t.id === id)
-      if (tab) tab.mode = mode
+      if (!tab || tab.mode === mode) return
+      tab.mode = mode
+      delete tab.selection
     },
 
     // ----- external change state machine -----

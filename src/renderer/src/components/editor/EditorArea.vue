@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { watch, nextTick, onBeforeUnmount, onMounted, ref, computed } from 'vue'
-import type { OutlineItem } from '@shared/types'
+import type { EditorSelectionState, OutlineItem } from '@shared/types'
 import { useTabsStore, type EditorTab } from '../../stores/tabs.store'
 import TiptapEditor from './tiptap/TiptapEditor.vue'
 import SourceEditor from './source/SourceEditor.vue'
 import SearchReplaceBar from './SearchReplaceBar.vue'
 
-defineProps<{ locked: boolean }>()
+const props = defineProps<{ locked: boolean }>()
 
 const emit = defineEmits<{
   (e: 'outline-change', items: OutlineItem[], activeId: string | null): void
@@ -21,6 +21,9 @@ interface SearchState {
 }
 
 interface EditorInstance {
+  getSelection: () => EditorSelectionState | null
+  whenReady: () => Promise<boolean>
+  focus: () => void
   flush: () => string
   jumpTo: (item: OutlineItem) => void
   emitOutline: () => void
@@ -70,11 +73,29 @@ function flushActive(): string | null {
 }
 
 function flushTab(id: string): string | null {
-  return editorInstances.get(id)?.flush() ?? null
+  const instance = editorInstances.get(id)
+  if (!instance) return null
+  const markdown = instance.flush()
+  // 即使正文未变，也要保存编辑器模型中的光标；未就绪时不覆盖上次位置。
+  const selection = instance.getSelection()
+  if (selection) tabs.updateTabSelection(id, selection)
+  return markdown
 }
 
 function flushAll(): void {
-  for (const instance of editorInstances.values()) instance.flush()
+  for (const id of editorInstances.keys()) flushTab(id)
+}
+
+async function focusActive(): Promise<void> {
+  const id = tabs.activeTabId
+  await nextTick()
+  if (!id) return
+  const instance = editorInstances.get(id)
+  if (!instance || !await instance.whenReady()) return
+  await nextTick()
+  // 恢复等待期间切页、关闭或弹出冲突对话框时，不再执行迟到的聚焦。
+  if (props.locked || tabs.conflict || tabs.activeTabId !== id || editorInstances.get(id) !== instance) return
+  instance.focus()
 }
 
 function jumpTo(item: OutlineItem): void {
@@ -168,7 +189,7 @@ function onToggleMode(): void {
   tabs.toggleMode(tab.id)
 }
 
-defineExpose({ flushActive, flushTab, flushAll, jumpTo })
+defineExpose({ flushActive, flushTab, flushAll, jumpTo, focusActive })
 </script>
 
 <template>

@@ -19,7 +19,7 @@ import { markdown, markdownLanguage } from '@codemirror/lang-markdown'
 import { languages } from '@codemirror/language-data'
 import { oneDark } from '@codemirror/theme-one-dark'
 import { SearchQuery, search, setSearchQuery } from '@codemirror/search'
-import type { OutlineItem } from '@shared/types'
+import type { EditorSelectionState, OutlineItem } from '@shared/types'
 import type { EditorTab } from '@/stores/tabs.store'
 import { useSettingsStore } from '@/stores/settings.store'
 
@@ -112,6 +112,23 @@ function buildExtensions(): Extension[] {
 
 function currentMarkdown(): string {
   return view ? view.state.doc.toString() : props.tab.markdown
+}
+
+function getSelection(): EditorSelectionState | null {
+  if (!view) return null
+  const { anchor, head } = view.state.selection.main
+  return { mode: 'source', anchor, head }
+}
+
+function whenReady(): Promise<boolean> {
+  return Promise.resolve(view !== null)
+}
+
+function focus(): void {
+  const root = hostRef.value
+  if (!view || props.locked || !root?.isConnected || root.closest('[inert]') || !root.getClientRects().length) return
+  view.focus()
+  view.dispatch({ effects: EditorView.scrollIntoView(view.state.selection.main.head, { y: 'center' }) })
 }
 
 function scheduleSync(): void {
@@ -279,6 +296,11 @@ onMounted(() => {
     }),
     parent: hostRef.value
   })
+  const saved = props.tab.selection
+  if (saved?.mode === 'source') {
+    const clamp = (pos: number): number => Math.max(0, Math.min(pos, view!.state.doc.length))
+    view.dispatch({ selection: { anchor: clamp(saved.anchor), head: clamp(saved.head) } })
+  }
   emitOutline()
 })
 
@@ -314,6 +336,9 @@ watch(
 )
 
 defineExpose({
+  getSelection,
+  whenReady,
+  focus,
   flush,
   jumpTo,
   emitOutline,

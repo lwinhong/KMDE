@@ -154,15 +154,70 @@ test('并发 save 串行执行，旧请求不能覆盖新请求，load 等待之
   assert.equal(await fs.readFile(draftPath(tab.id), 'utf-8'), '新内容')
 })
 
-test('save 在调用时复制快照，不受排队期间对象修改影响', async (t) => {
+test('光标与反向选区按模式精确往返，旧 version 1 页签不补 selection 字段', async (t) => {
+  const { root, storage, snapshotPath } = await fixture(t)
+  const source = makeTab({ mode: 'source', selection: { mode: 'source', anchor: Number.MAX_SAFE_INTEGER, head: 0 } })
+  const wysiwyg = makeTab({ selection: { mode: 'wysiwyg', anchor: 2, head: 7 } })
+  const legacy = makeTab()
+  const expected = makeSession(source, wysiwyg, legacy)
+  await storage.save(expected)
+  assert.deepEqual(await readManifest(snapshotPath), expected)
+  const loaded = await new SessionStorage(root).load()
+  assert.deepEqual(loaded, expected)
+  assert.equal(Object.hasOwn(loaded!.tabs[2], 'selection'), false)
+  loaded!.tabs[0].selection!.head = 42
+  assert.deepEqual(await storage.load(), expected)
+})
+
+test('坏 selection 在 load/save 中降级忽略，保留文档及其他页签的合法光标', async (t) => {
+  const { root, storage, snapshotPath } = await fixture(t)
+  await fs.mkdir(root, { recursive: true })
+  const tab = makeTab()
+  const valid = makeTab({ selection: { mode: 'wysiwyg', anchor: 0, head: 0 } })
+  const expected = makeSession(tab, valid)
+  const invalidSelections: unknown[] = [
+    undefined, null, [], 1, true, 'source', {},
+    { mode: 'source', anchor: 0 }, { mode: 'source', head: 0 },
+    ...[undefined, null, 'preview', 1].map((mode) => ({ mode, anchor: 0, head: 0 })),
+    ...['anchor', 'head'].flatMap((field) =>
+      [-1, 0.5, NaN, Infinity, -Infinity, Number.MAX_SAFE_INTEGER + 1, '0', null, undefined, true]
+        .map((value) => ({ mode: 'source', anchor: 0, head: 0, [field]: value })))
+  ]
+  for (const selection of invalidSelections) {
+    const value = makeSession({ ...tab, selection } as SessionTab, valid)
+    const raw = JSON.stringify(value)
+    await fs.writeFile(snapshotPath, raw)
+    const loaded = await storage.load()
+    assert.deepEqual(loaded, expected)
+    assert.equal(Object.hasOwn(loaded!.tabs[0], 'selection'), false)
+    assert.equal(await fs.readFile(snapshotPath, 'utf-8'), raw, '恢复不能因坏光标改写原快照')
+    assert.deepEqual(await storage.save(value), { cleanupPending: false })
+    assert.deepEqual(await readManifest(snapshotPath), expected)
+    assert.equal(Object.hasOwn((await storage.load())!.tabs[0], 'selection'), false)
+  }
+})
+
+test('合法 selection 只复制契约字段，不把 UI 扩展字段写入快照', async (t) => {
   const { storage } = await fixture(t)
-  const value = makeSession(makeTab())
+  const selection = { mode: 'source' as const, anchor: 0, head: 3, extra: { transient: true } }
+  const tab = makeTab({ mode: 'source', selection })
+  await storage.save(makeSession(tab))
+  assert.deepEqual((await storage.load())!.tabs[0].selection, { mode: 'source', anchor: 0, head: 3 })
+})
+
+test('save 在调用时深复制光标与快照，不受排队期间对象修改影响', async (t) => {
+  const { storage } = await fixture(t)
+  const value = makeSession(makeTab({ selection: { mode: 'wysiwyg', anchor: 7, head: 2 } }))
   const expected = structuredClone(value)
+  const previous = storage.save(makeSession({ ...value.tabs[0], markdown: '前一请求' }))
   const saving = storage.save(value)
+  value.tabs[0].selection!.mode = 'source'
+  value.tabs[0].selection!.anchor = 100
+  value.tabs[0].selection!.head = 200
   value.tabs[0].markdown = '不应被保存'
   value.tabs.length = 0
   value.activeTabId = null
-  await saving
+  await Promise.all([previous, saving])
   assert.deepEqual(await storage.load(), expected)
 })
 

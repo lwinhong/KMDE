@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onBeforeUnmount, ref, shallowRef, reactive, watch } from 'vue'
+import { computed, nextTick, onMounted, onBeforeUnmount, ref, shallowRef, reactive, watch } from 'vue'
 import { useMessage } from 'naive-ui'
 import { useI18n } from 'vue-i18n'
 import { useSettingsStore } from '../../stores/settings.store'
@@ -336,6 +336,7 @@ async function requestCloseApp(reload = false): Promise<void> {
   let committed = false
   try {
     editorAreaRef.value?.flushAll()
+    await nextTick()
     await tabs.waitForSaves()
     editorAreaRef.value?.flushAll()
     if (!await persistence.flush()) {
@@ -419,6 +420,8 @@ onMounted(async () => {
     // 文档恢复决定编辑就绪；工作区读取和索引不再占用启动屏障。
     initializing.value = false
     void openLastWorkspace()
+    await nextTick()
+    await editorAreaRef.value?.focusActive()
     await window.kmde.rendererReady()
   } catch (error) {
     console.error('[session] 恢复失败:', error)
@@ -456,13 +459,13 @@ function onOutlineResize(delta: number): void {
     <TitleBar @command="runCommand" @request-close="requestCloseApp()" />
     <TabBar
       v-if="tabs.activeTab"
-      :inert="closingApp || closingTabs.size > 0 || !tabs.sessionReady"
+      :inert="initializing || closingApp || closingTabs.size > 0 || !tabs.sessionReady"
       @new-file="newFile()"
       @close-tab="closeTab"
       @close-tabs="closeTabs"
       @reveal-tab="revealTab"
     />
-    <div class="workbench-main" :inert="closingApp || closingTabs.size > 0 || !tabs.sessionReady">
+    <div class="workbench-main" :inert="initializing || closingApp || closingTabs.size > 0 || !tabs.sessionReady">
       <FileTree v-if="settings.sidebarVisible" @open-file="openFileByPath" @close-folder="closeWorkspace" />
       <Resizer
         v-if="settings.sidebarVisible"
@@ -470,20 +473,26 @@ function onOutlineResize(delta: number): void {
         @resize="onSidebarResize"
         @resize-end="settings.persist()"
       />
+      <div v-if="initializing" class="editor-placeholder" role="status">
+        {{ t('notify.fileLoading') }}
+      </div>
       <EditorArea
-        v-if="tabs.activeTab"
+        v-else-if="tabs.activeTab"
         ref="editorAreaRef"
         :locked="closingApp || closingTabs.size > 0"
         @outline-change="handleOutlineChange"
         @request-save-as="saveAsTab"
       />
       <WelcomePage
-        v-else
+        v-else-if="tabs.sessionReady"
         @open-file="openFilePicker"
         @open-folder="openFolderPicker"
         @new-file="newFile()"
         @resume-workspace="openLastWorkspace"
       />
+      <div v-else class="editor-placeholder" role="alert">
+        {{ t('notify.sessionRestoreFailed') }}
+      </div>
       <Resizer
         v-if="settings.outlineVisible"
         side="right"
@@ -520,5 +529,14 @@ function onOutlineResize(delta: number): void {
   display: flex;
   min-height: 0;
   overflow: hidden;
+}
+
+.editor-placeholder {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--kme-text-3);
 }
 </style>

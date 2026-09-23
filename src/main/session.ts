@@ -65,7 +65,7 @@ function validateSession(value: unknown): EditorSession {
     }
 
     // 复制契约字段，避免排队期间调用方修改对象影响已提交的保存请求。
-    tabs.push({
+    const saved: SessionTab = {
       id: tab.id,
       path: tab.path,
       fileName: tab.fileName,
@@ -74,7 +74,17 @@ function validateSession(value: unknown): EditorSession {
       mode: tab.mode,
       savedMtimeMs: tab.savedMtimeMs,
       deleted: tab.deleted
-    })
+    }
+    // 光标是可选 UI 元数据；损坏时忽略，不能影响文档恢复。
+    const selection = tab.selection
+    if (
+      isRecord(selection) && (selection.mode === 'source' || selection.mode === 'wysiwyg') &&
+      typeof selection.anchor === 'number' && Number.isSafeInteger(selection.anchor) && selection.anchor >= 0 &&
+      typeof selection.head === 'number' && Number.isSafeInteger(selection.head) && selection.head >= 0
+    ) {
+      saved.selection = { mode: selection.mode, anchor: selection.anchor, head: selection.head }
+    }
+    tabs.push(saved)
   }
   if (value.activeTabId !== null && (
     typeof value.activeTabId !== 'string' || !tabs.some((tab) => tab.id === value.activeTabId)

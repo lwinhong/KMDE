@@ -5,7 +5,8 @@ import type { TestContext } from 'node:test'
 import { setImmediate as nextTurn } from 'node:timers/promises'
 import { createPinia, disposePinia, setActivePinia } from 'pinia'
 import type { KmdeApi } from '../../../preload'
-import type { EditorSession, ReadFileResult, SessionSaveOptions, SessionSaveResult, SessionTab } from '@shared/types'
+import type { EditorSelectionState, EditorSession, ReadFileResult, SessionSaveOptions, SessionSaveResult, SessionTab } from '@shared/types'
+import { MAX_WYSIWYG_FILE_SIZE } from '@shared/types'
 import { i18n } from '../i18n'
 import { useTabsStore } from './tabs.store'
 
@@ -97,6 +98,206 @@ function fixture(t: TestContext, initial: EditorSession | null = null) {
 
 // 所有 action 都运行真实实现，只模拟跨进程 kmde 边界；每例独立 Pinia。
 describe('会话恢复与标签保存契约', { concurrency: false, timeout: 5000 }, () => {
+  test('仅光标更新不改内容及 dirty，各页签独立存副本，相同值不重复赋值', async (t) => {
+    const first = savedTab({ mode: 'source', dirty: false })
+    const second = savedTab()
+    const { store, api } = fixture(t, sessionOf(first, second))
+    await store.restoreSession()
+    const before = store.sessionSnapshot()
+    const source: EditorSelectionState = { mode: 'source', anchor: 7, head: 2 }
+    const wysiwyg: EditorSelectionState = { mode: 'wysiwyg', anchor: 2, head: 7 }
+    store.updateTabSelection(first.id, source)
+    store.updateTabSelection(second.id, wysiwyg)
+    assert.deepEqual(store.sessionSnapshot(), {
+      ...before, tabs: [{ ...first, selection: source }, { ...second, selection: wysiwyg }]
+    })
+    const stored = store.tabs[0].selection
+    store.updateTabSelection(first.id, { ...source })
+    assert.equal(store.tabs[0].selection, stored)
+    source.mode = 'wysiwyg'
+    source.anchor = 100
+    source.head = 200
+    wysiwyg.head = 300
+    assert.deepEqual(store.tabs[0].selection, { mode: 'source', anchor: 7, head: 2 })
+    assert.deepEqual(store.tabs[1].selection, { mode: 'wysiwyg', anchor: 2, head: 7 })
+    store.updateTabSelection(first.id, { mode: 'source', anchor: 6, head: 2 })
+    assert.notEqual(store.tabs[0].selection, stored)
+    store.updateTabSelection(first.id, { mode: 'source', anchor: 6, head: 0 })
+    assert.deepEqual(store.tabs[0].selection, { mode: 'source', anchor: 6, head: 0 })
+    assert.deepEqual(store.tabs[1].selection, { mode: 'wysiwyg', anchor: 2, head: 7 })
+    assert.deepEqual(store.tabs.map((tab) => [tab.markdown, tab.dirty]), [[first.markdown, false], [second.markdown, true]])
+    assert.equal(api.writeFile.mock.callCount(), 0)
+    assert.equal(api.saveSession.mock.callCount(), 0)
+  })
+
+  test('两种模式光标与反向选区跨会话往返，旧快照及新页签不补 selection', async (t) => {
+    const first = savedTab({ mode: 'source' })
+    const second = savedTab()
+    const legacy = savedTab()
+    const { store, newStore, commits, api } = fixture(t, sessionOf(first, second, legacy))
+    await store.restoreSession()
+    assert.ok(store.tabs.every((tab) => !Object.hasOwn(tab, 'selection')))
+    assert.ok(store.sessionSnapshot().tabs.every((tab) => !Object.hasOwn(tab, 'selection')))
+    const created = store.newUntitled()!
+    assert.equal(Object.hasOwn(created, 'selection'), false)
+    store.updateTabSelection(first.id, { mode: 'source', anchor: 7, head: 0 })
+    store.updateTabSelection(second.id, { mode: 'wysiwyg', anchor: 2, head: 7 })
+    store.activateTab(second.id)
+    const expected = store.sessionSnapshot()
+    assert.equal(await store.persistSession(), true)
+    assert.deepEqual(commits, [expected])
+    const restarted = newStore()
+    await restarted.restoreSession()
+    assert.deepEqual(restarted.sessionSnapshot(), expected)
+    assert.equal(Object.hasOwn(restarted.tabs[2], 'selection'), false)
+    assert.equal(Object.hasOwn(restarted.tabs[3], 'selection'), false)
+    assert.equal(api.saveSession.mock.calls[0].arguments[1], undefined)
+    assert.equal(api.writeFile.mock.callCount(), 0)
+  })
+
+  test('恢复输入、store 和会话快照的嵌套光标互不共享', async (t) => {
+    const selection: EditorSelectionState = { mode: 'wysiwyg', anchor: 2, head: 7 }
+    const session = sessionOf(savedTab({ selection: { ...selection } }))
+    const { store, api } = fixture(t)
+    // 返回同一输入对象，避免 mock 自身的深复制掩盖恢复实现的共享引用。
+    t.mock.method(api, 'loadSession', async () => session)
+    await store.restoreSession()
+    const snapshot = store.sessionSnapshot()
+    assert.deepEqual(snapshot, session)
+    session.tabs[0].selection!.anchor = 10
+    assert.deepEqual(store.tabs[0].selection, selection)
+    store.tabs[0].selection!.head = 20
+    assert.deepEqual(snapshot.tabs[0].selection, selection)
+    assert.deepEqual(session.tabs[0].selection, { ...selection, anchor: 10 })
+    snapshot.tabs[0].selection!.anchor = 30
+    assert.deepEqual(store.tabs[0].selection, { ...selection, head: 20 })
+  })
+
+  test('忽略不存在、loading 和模式不匹配的光标事件', async (t) => {
+    const source = savedTab({ mode: 'source', selection: { mode: 'source', anchor: 0, head: 3 } })
+    const wysiwyg = savedTab({ selection: { mode: 'wysiwyg', anchor: 1, head: 4 } })
+    const { store, api } = fixture(t, sessionOf(source, wysiwyg))
+    await store.restoreSession()
+    const before = store.sessionSnapshot()
+    const stored = store.tabs.map((tab) => tab.selection)
+    store.updateTabSelection(randomUUID(), { mode: 'source', anchor: 0, head: 0 })
+    store.updateTabSelection(source.id, { mode: 'wysiwyg', anchor: 2, head: 3 })
+    store.updateTabSelection(wysiwyg.id, { mode: 'source', anchor: 2, head: 3 })
+    assert.deepEqual(store.sessionSnapshot(), before)
+    store.tabs.forEach((tab, index) => assert.equal(tab.selection, stored[index]))
+    const loaded = deferred<ReadFileResult>()
+    t.mock.method(api, 'readFile', () => loaded.promise)
+    const opening = store.openPath('C:\\笔记\\读取光标.md')
+    const tab = store.tabs.at(-1)!
+    const selection: EditorSelectionState = { mode: tab.mode, anchor: 1, head: 2 }
+    try {
+      assert.equal(tab.loading, true)
+      store.updateTabSelection(tab.id, selection)
+      assert.equal(Object.hasOwn(tab, 'selection'), false)
+      assert.equal(tab.markdown, '')
+      assert.equal(tab.dirty, false)
+    } finally {
+      loaded.resolve({ content: '完整内容', mtimeMs: 10 })
+      await opening
+    }
+    store.updateTabSelection(tab.id, selection)
+    assert.deepEqual(tab.selection, selection)
+    assert.equal(tab.dirty, false)
+  })
+
+  test('setMode 同模式保留光标，真正切换与 toggleMode 清理旧坐标并拒绝迟到事件', async (t) => {
+    const first = savedTab({ dirty: false })
+    const second = savedTab({ selection: { mode: 'wysiwyg', anchor: 1, head: 3 } })
+    const { store } = fixture(t, sessionOf(first, second))
+    await store.restoreSession()
+    const tab = store.tabs[0]
+    const otherSelection = store.tabs[1].selection
+    for (const action of ['setMode', 'toggleMode'] as const) {
+      for (let direction = 0; direction < 2; direction++) {
+        const previous: EditorSelectionState = { mode: tab.mode, anchor: 2, head: 6 }
+        store.updateTabSelection(tab.id, previous)
+        const stored = tab.selection
+        store.setMode(tab.id, tab.mode)
+        assert.equal(tab.selection, stored)
+        const nextMode = tab.mode === 'wysiwyg' ? 'source' : 'wysiwyg'
+        if (action === 'setMode') store.setMode(tab.id, nextMode)
+        else store.toggleMode(tab.id)
+        assert.equal(tab.mode, nextMode)
+        assert.equal(Object.hasOwn(tab, 'selection'), false)
+        assert.equal(Object.hasOwn(store.sessionSnapshot().tabs[0], 'selection'), false)
+        store.updateTabSelection(tab.id, previous)
+        assert.equal(Object.hasOwn(tab, 'selection'), false)
+        assert.equal(tab.markdown, first.markdown)
+        assert.equal(tab.dirty, false)
+        assert.equal(store.tabs[1].selection, otherSelection)
+      }
+    }
+    const before = store.sessionSnapshot()
+    store.setMode(randomUUID(), 'source')
+    store.toggleMode(randomUUID())
+    assert.deepEqual(store.sessionSnapshot(), before)
+  })
+
+  test('恢复大文档强制 source 时仅保留匹配光标，边界大小不切换模式', async (t) => {
+    const large = 'x'.repeat(MAX_WYSIWYG_FILE_SIZE + 1)
+    const wysiwyg: EditorSelectionState = { mode: 'wysiwyg', anchor: 1, head: 2 }
+    const source: EditorSelectionState = { mode: 'source', anchor: 0, head: 3 }
+    const draft = savedTab({ markdown: large, selection: wysiwyg })
+    const alreadySource = savedTab({ markdown: large, mode: 'source', selection: source })
+    const diskGrowth = savedTab({ path: 'C:\\笔记\\变大.md', dirty: false, selection: wysiwyg })
+    const boundary = savedTab({ markdown: large.slice(1), selection: wysiwyg })
+    const mismatch = savedTab({ mode: 'source', selection: wysiwyg })
+    const session = sessionOf(draft, alreadySource, diskGrowth, boundary, mismatch)
+    const original = clone(session)
+    const { store, api, diskFile } = fixture(t)
+    t.mock.method(api, 'loadSession', async () => session)
+    diskFile(diskGrowth.path!, large)
+    await store.restoreSession()
+    assert.deepEqual(store.tabs.map((tab) => tab.mode), ['source', 'source', 'source', 'wysiwyg', 'source'])
+    for (const index of [0, 2, 4]) assert.equal(Object.hasOwn(store.tabs[index], 'selection'), false)
+    assert.deepEqual(store.tabs[1].selection, source)
+    assert.deepEqual(store.tabs[3].selection, wysiwyg)
+    assert.equal(store.tabs[0].markdown, large)
+    assert.equal(store.tabs[0].dirty, true)
+    assert.equal(store.tabs[2].markdown, large)
+    assert.equal(store.tabs[2].dirty, false)
+    assert.deepEqual(session, original)
+    assert.equal(api.writeFile.mock.callCount(), 0)
+  })
+
+  test('已交付保存的光标快照不受嵌套修改影响，排队提交读取最新光标', async (t) => {
+    const tab = savedTab({ dirty: false, selection: { mode: 'wysiwyg', anchor: 1, head: 3 } })
+    const { store, api, commits } = fixture(t, sessionOf(tab))
+    await store.restoreSession()
+    const entered = deferred<void>()
+    const release = deferred<void>()
+    const requests: EditorSession[] = []
+    const save = api.saveSession
+    t.mock.method(api, 'saveSession', async (snapshot: EditorSession, options?: SessionSaveOptions) => {
+      requests.push(snapshot)
+      if (requests.length === 1) {
+        entered.resolve()
+        await release.promise
+      }
+      return save(snapshot, options)
+    })
+    const first = store.persistSession()
+    let second: Promise<boolean> | undefined
+    try {
+      await entered.promise
+      second = store.persistSession()
+      store.tabs[0].selection!.head = 6
+      assert.deepEqual(requests[0].tabs[0].selection, tab.selection)
+    } finally {
+      release.resolve()
+      await Promise.all([first, second])
+    }
+    assert.deepEqual(await Promise.all([first, second]), [true, true])
+    assert.deepEqual(commits.map((snapshot) => snapshot.tabs[0].selection), [tab.selection, { ...tab.selection, head: 6 }])
+    assert.ok(commits.every((snapshot) => !snapshot.tabs[0].dirty && snapshot.tabs[0].markdown === tab.markdown))
+    assert.equal(api.writeFile.mock.callCount(), 0)
+  })
+
   test('UUID 与未命名序号跨会话恢复不冲突，新建不弹出另存为', async (t) => {
     const { store, api, newStore, commits, diskFile } = fixture(t)
     await store.restoreSession()

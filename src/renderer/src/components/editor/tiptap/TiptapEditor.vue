@@ -3,9 +3,9 @@ import { ref, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useEditor, EditorContent } from '@tiptap/vue-3'
 import { BubbleMenu } from '@tiptap/vue-3/menus'
 import { Extension } from '@tiptap/core'
-import { Plugin, PluginKey } from '@tiptap/pm/state'
+import { Plugin, PluginKey, TextSelection } from '@tiptap/pm/state'
 import { Decoration, DecorationSet } from '@tiptap/pm/view'
-import type { OutlineItem } from '@shared/types'
+import type { EditorSelectionState, OutlineItem } from '@shared/types'
 import type { EditorTab } from '@/stores/tabs.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
 import { dirname, joinPath } from '@/stores/pathUtils'
@@ -45,6 +45,9 @@ const tableToolbarVisible = ref(false)
 const tableToolbarStyle = ref<{ left: string; top: string }>({ left: '0px', top: '0px' })
 
 let syncTimer: ReturnType<typeof setTimeout> | null = null
+let ready = false
+let resolveReady!: (ready: boolean) => void
+const readyPromise = new Promise<boolean>((resolve) => { resolveReady = resolve })
 
 const searchPluginKey = new PluginKey('kmdeSearch')
 
@@ -87,8 +90,17 @@ const editor = useEditor({
   },
   extensions: [...buildEditorExtensions(props.tab.path), SearchHighlight],
   contentType: 'markdown',
-  onCreate() {
+  onCreate({ editor: created }) {
+    const saved = props.tab.selection
+    if (saved?.mode === 'wysiwyg') {
+      const doc = created.state.doc
+      const clamp = (pos: number): number => Math.max(0, Math.min(pos, doc.content.size))
+      const selection = TextSelection.between(doc.resolve(clamp(saved.anchor)), doc.resolve(clamp(saved.head)))
+      created.view.dispatch(created.state.tr.setSelection(selection).setMeta('addToHistory', false))
+    }
+    ready = true
     emitOutline()
+    resolveReady(true)
   },
   onUpdate() {
     scheduleSync()
@@ -104,6 +116,25 @@ watch(() => props.locked, (locked) => editor.value?.setEditable(!locked, false))
 
 function currentMarkdown(): string {
   return editor.value ? editor.value.getMarkdown() : props.tab.markdown
+}
+
+function getSelection(): EditorSelectionState | null {
+  if (!ready || !editor.value || editor.value.isDestroyed) return null
+  const { anchor, head } = editor.value.state.selection
+  return { mode: 'wysiwyg', anchor, head }
+}
+
+function whenReady(): Promise<boolean> {
+  return readyPromise
+}
+
+function focus(): void {
+  const e = editor.value
+  const root = wrapperRef.value
+  if (!ready || !e || e.isDestroyed || props.locked || !root?.isConnected || root.closest('[inert]') || !root.getClientRects().length) return
+  // 同步聚焦，避免命令内部的延迟帧在切页或关闭后抢走焦点。
+  e.view.focus()
+  e.view.dispatch(e.state.tr.scrollIntoView())
 }
 
 function scheduleSync(): void {
@@ -385,6 +416,8 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   flush()
+  ready = false
+  resolveReady(false)
   if (tableToolbarRaf) cancelAnimationFrame(tableToolbarRaf)
   window.removeEventListener('resize', updateTableToolbar)
   wrapperRef.value?.removeEventListener('scroll', updateTableToolbar)
@@ -393,6 +426,9 @@ onBeforeUnmount(() => {
 })
 
 defineExpose({
+  getSelection,
+  whenReady,
+  focus,
   flush,
   jumpTo,
   emitOutline,

@@ -61,6 +61,12 @@ export interface OutlineItem {
 
 export type EditorMode = 'wysiwyg' | 'source'
 
+export interface EditorSelectionState {
+  mode: EditorMode
+  anchor: number
+  head: number
+}
+
 export interface SessionTab {
   id: string
   path: string | null
@@ -70,6 +76,7 @@ export interface SessionTab {
   mode: EditorMode
   savedMtimeMs: number
   deleted: boolean
+  selection?: EditorSelectionState
 }
 
 export interface EditorSession {
