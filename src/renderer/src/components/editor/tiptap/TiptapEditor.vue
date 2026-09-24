@@ -480,38 +480,26 @@ function getScrollLine(): number {
   const map = getNodeLineMap()
   if (map.length === 0) return 1
   const contentRect = content.getBoundingClientRect()
-  const domRect = view.dom.getBoundingClientRect()
 
-  // 快速路径：探测点取内容区左边缘（跳过 padding）与可见顶部，避开 padding 与行内空白。
-  const firstBlock = view.dom.firstElementChild as HTMLElement | null
-  const blockTop = firstBlock ? firstBlock.getBoundingClientRect().top : domRect.top
-  const left = Math.max(domRect.left, contentRect.left) + 40
-  const top = Math.max(blockTop, contentRect.top) + 2
-  let pos = view.posAtCoords({ left, top })
-
-  // 回退：posAtCoords 探测落空时，遍历块起始坐标找首个可见块。
-  if (pos == null) {
-    let off = 0
-    for (let i = 0; i < doc.childCount; i++) {
-      const c = view.coordsAtPos(Math.min(off + 1, doc.content.size))
-      if (c && c.bottom > contentRect.top) {
-        pos = off + 1
-        break
-      }
-      off += doc.child(i).nodeSize
-    }
-  }
-  if (pos == null) return 1
-
+  // 遍历顶级节点找首个可见块（块底部在容器顶部下方）。
+  // 不用 posAtCoords 是因为三层 padding（content 16 + page 24 + prosemirror 32 = 72px）
+  // 使探测点极易落在 padding 空白区返回 pos=1（非 null），回退逻辑不触发。
   let offset = 0
   for (let i = 0; i < doc.childCount; i++) {
     const child = doc.child(i)
-    if (pos < offset + child.nodeSize) {
+    const startCoords = view.coordsAtPos(Math.min(offset + 1, doc.content.size))
+    if (startCoords && startCoords.bottom > contentRect.top) {
       const startLine = map[i] ?? 1
       const nextLine = map[i + 1]
-      // 节点内按 pos 比例插值，避免长节点（如大代码块）只对齐到起始行。
-      if (nextLine === undefined || nextLine <= startLine || child.nodeSize <= 0) return startLine
-      const ratio = (pos - offset) / child.nodeSize
+      if (nextLine === undefined || nextLine <= startLine) return startLine
+      // 节点内按可见顶部在节点高度中的比例插值，避免长节点只对齐到起始行。
+      const endCoords = view.coordsAtPos(Math.min(offset + child.nodeSize, doc.content.size))
+      const nodeTop = startCoords.top
+      const nodeBottom = endCoords?.bottom ?? startCoords.bottom
+      const visibleTop = Math.max(nodeTop, contentRect.top)
+      const ratio = nodeBottom > nodeTop
+        ? Math.min(1, Math.max(0, (visibleTop - nodeTop) / (nodeBottom - nodeTop)))
+        : 0
       return startLine + ratio * (nextLine - startLine)
     }
     offset += child.nodeSize
@@ -530,12 +518,15 @@ function scrollToLine(line: number): void {
   let offset = 0
   for (let k = 0; k < i; k++) offset += doc.child(k).nodeSize
   const startCoords = view.coordsAtPos(Math.min(offset + 1, doc.content.size))
+  if (!startCoords) return
   let targetY = startCoords.top
   const nextLine = map[i + 1]
   if (nextLine !== undefined && nextLine > map[i]) {
     const ratio = Math.min(1, Math.max(0, (line - map[i]) / (nextLine - map[i])))
     const nextCoords = view.coordsAtPos(Math.min(offset + doc.child(i).nodeSize + 1, doc.content.size))
-    targetY = startCoords.top + ratio * (nextCoords.top - startCoords.top)
+    if (nextCoords) {
+      targetY = startCoords.top + ratio * (nextCoords.top - startCoords.top)
+    }
   }
   const contentRect = content.getBoundingClientRect()
   const targetTop = targetY - contentRect.top + content.scrollTop - 2
