@@ -2,6 +2,7 @@
 import { computed, nextTick, ref, watch } from 'vue'
 import type { OutlineItem } from '@shared/types'
 import { useSettingsStore } from '../../stores/settings.store'
+import { IconChevronRight } from '@/components/icons'
 
 const props = defineProps<{
   items: OutlineItem[]
@@ -40,9 +41,7 @@ watch(
     <div class="outline-header">
       <span class="outline-header-title">{{ $t('outline.title') }}</span>
       <button class="outline-collapse" :title="$t('outline.collapse')" @click="settings.toggleOutline()">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M9 18l6-6-6-6" />
-        </svg>
+        <IconChevronRight :size="16" />
       </button>
     </div>
     <div ref="bodyRef" class="outline-body">

@@ -1,9 +1,9 @@
 {
   "name": "kmde",
   "version": "0.1.0",
-  "description": "KMDE - a Typora-style markdown editor built with Electron + Vue 3 + Tiptap",
+  "description": "KMDE - a Notion-like-style markdown editor built with Electron + Vue 3 + Tiptap",
   "main": "out/main/index.js",
-  "author": "liyk",
+  "author": "lwinhong",
   "license": "MIT",
   "private": true,
   "scripts": {

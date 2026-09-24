@@ -6,6 +6,15 @@ import { useI18n } from 'vue-i18n'
 import type { MenuCommand, AppLocale } from '@shared/types'
 import { useTabsStore } from '@/stores/tabs.store'
 import { useSettingsStore } from '@/stores/settings.store'
+import {
+  IconLogo,
+  IconPanelOutline,
+  IconPanelSidebar,
+  IconWindowClose,
+  IconWindowMaximize,
+  IconWindowMinimize,
+  IconWindowRestore
+} from '@/components/icons'
 
 const emit = defineEmits<{
   (e: 'command', command: MenuCommand): void
@@ -157,12 +166,7 @@ function onMenuSelect(key: string | number): void {
   <div class="title-bar" :class="{ 'is-maximized': maximized }">
     <div class="title-bar-left">
       <div class="title-bar-logo">
-        <svg width="16" height="16" viewBox="0 0 256 256" aria-hidden="true">
-          <rect x="8" y="8" width="240" height="240" rx="56" style="fill: var(--kme-primary)" />
-          <path d="M78 72 L78 184 M78 128 L150 72 M78 128 L150 184"
-            stroke="#fff" stroke-width="10" stroke-linecap="round" fill="none" />
-          <path d="M168 72 L168 184" stroke="#fff" stroke-width="12" stroke-linecap="round" />
-        </svg>
+        <IconLogo :size="16" />
       </div>
       <NDropdown
         v-for="menu in menus"
@@ -187,10 +191,7 @@ function onMenuSelect(key: string | number): void {
         :title="settings.sidebarVisible ? t('sidebar.collapse') : t('sidebar.expand')"
         @click="settings.toggleSidebar()"
       >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
-          <rect x="3" y="5" width="18" height="16" rx="1.5" />
-          <line x1="9" y1="5" x2="9" y2="21" />
-        </svg>
+        <IconPanelSidebar />
       </button>
       <button
         class="title-bar-toggle"
@@ -198,30 +199,20 @@ function onMenuSelect(key: string | number): void {
         :title="settings.outlineVisible ? t('outline.collapse') : t('outline.expand')"
         @click="settings.toggleOutline()"
       >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
-          <rect x="3" y="5" width="18" height="16" rx="1.5" />
-          <line x1="15" y1="5" x2="15" y2="21" />
-        </svg>
+        <IconPanelOutline />
       </button>
     </div>
 
     <div class="title-bar-controls">
       <button class="title-bar-ctl" :title="$t('workbench.minimize')" @click="minimize">
-        <svg width="12" height="12" viewBox="0 0 11 11"><path d="M1 5.5 h9" stroke="currentColor" stroke-width="1" /></svg>
+        <IconWindowMinimize />
       </button>
       <button class="title-bar-ctl" :title="maximized ? $t('workbench.restore') : $t('workbench.maximize')" @click="toggleMaximize">
-        <svg v-if="!maximized" width="12" height="12" viewBox="0 0 11 11">
-          <rect x="1.5" y="1.5" width="8" height="8" fill="none" stroke="currentColor" stroke-width="1" />
-        </svg>
-        <svg v-else width="12" height="12" viewBox="0 0 11 11">
-          <rect x="1.5" y="3.5" width="6" height="6" fill="none" stroke="currentColor" stroke-width="1" />
-          <path d="M3.5 3.5 V1.5 h6 v6 h-2" fill="none" stroke="currentColor" stroke-width="1" />
-        </svg>
+        <IconWindowMaximize v-if="!maximized" />
+        <IconWindowRestore v-else />
       </button>
       <button class="title-bar-ctl title-bar-close" :title="$t('common.close')" @click="requestClose">
-        <svg width="12" height="12" viewBox="0 0 11 11">
-          <path d="M1.5 1.5 L9.5 9.5 M9.5 1.5 L1.5 9.5" stroke="currentColor" stroke-width="1.1" />
-        </svg>
+        <IconWindowClose />
       </button>
     </div>
   </div>

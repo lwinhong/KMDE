@@ -65,8 +65,11 @@ export default {
     theme: '深色/浅色主题'
   },
   about: {
-    desc: 'Typora 风格的 Markdown 编辑器',
-    version: '版本 {version}'
+    desc: 'Notion-like 风格的 Markdown 编辑器',
+    version: '版本 {version}',
+    github: 'GitHub',
+    issues: 'Issues',
+    releases: 'Releases'
   },
   statusbar: {
     unsaved: '未保存',

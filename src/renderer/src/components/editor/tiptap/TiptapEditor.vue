@@ -19,7 +19,7 @@ import {
   DeleteColumnIcon,
   DeleteRowIcon,
   DeleteTableIcon
-} from './icons/index.jsx'
+} from './icons'
 import MenuBar from './components/MenuBar.vue'
 import LinkPopover from './components/LinkPopover.vue'
 import MarkButtons from './components/MarkButtons.vue'

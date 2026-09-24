@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { useSettingsStore } from '../../stores/settings.store'
 import { useTabsStore } from '../../stores/tabs.store'
 import { useWorkspaceStore } from '../../stores/workspace.store'
+import { IconModeSource, IconModeSplit, IconModeWysiwyg } from '@/components/icons'
 
 const settings = useSettingsStore()
 const tabs = useTabsStore()
@@ -20,10 +21,11 @@ const charCount = computed(() => {
   return tab.markdown.replace(/\s/g, '').length
 })
 
+const mode = computed(() => tabs.activeTab?.mode ?? 'wysiwyg')
+
 const modeLabel = computed(() => {
-  const mode = tabs.activeTab?.mode
-  if (mode === 'source') return t('statusbar.sourceMode')
-  if (mode === 'split') return t('statusbar.splitMode')
+  if (mode.value === 'source') return t('statusbar.sourceMode')
+  if (mode.value === 'split') return t('statusbar.splitMode')
   return t('statusbar.wysiwygMode')
 })
 </script>
@@ -50,6 +52,9 @@ const modeLabel = computed(() => {
         :title="$t('statusbar.toggleModeHint')"
         @click="emit('toggle-mode')"
       >
+        <IconModeSource v-if="mode === 'source'" :size="12" />
+        <IconModeSplit v-else-if="mode === 'split'" :size="12" />
+        <IconModeWysiwyg v-else :size="12" />
         {{ modeLabel }}
       </button>
       <button class="statusbar-btn" :title="$t('statusbar.toggleTheme')" @click="settings.toggleTheme()">
@@ -100,6 +105,7 @@ const modeLabel = computed(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 4px;
   border-radius: var(--kme-radius-sm);
   cursor: pointer;
   transition: background 0.15s, color 0.15s;

@@ -1,11 +1,23 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { NModal, NButton } from 'naive-ui'
+import { IconLogo } from '@/components/icons'
+
+const REPO_URL = 'https://github.com/lwinhong/KMDE'
+const links = [
+  { key: 'about.github', url: REPO_URL },
+  { key: 'about.issues', url: `${REPO_URL}/issues` },
+  { key: 'about.releases', url: `${REPO_URL}/releases` }
+]
 
 const show = ref(false)
 
 function open(): void {
   show.value = true
+}
+
+function openExternal(url: string): void {
+  window.open(url, '_blank', 'noopener')
 }
 
 defineExpose({ open })
@@ -14,14 +26,7 @@ defineExpose({ open })
 <template>
   <NModal :show="show" transform-origin="center" @update:show="show = $event">
     <div class="about-dialog">
-      <svg class="about-logo" width="56" height="56" viewBox="0 0 256 256" aria-hidden="true">
-        <rect x="8" y="8" width="240" height="240" rx="56" style="fill: var(--kme-primary)" />
-        <path
-          d="M78 72 L78 184 M78 128 L150 72 M78 128 L150 184"
-          stroke="#fff" stroke-width="10" stroke-linecap="round" fill="none"
-        />
-        <path d="M168 72 L168 184" stroke="#fff" stroke-width="12" stroke-linecap="round" />
-      </svg>
+      <IconLogo :size="56" class="about-logo" />
 
       <div class="about-name">KMDE</div>
       <div class="about-desc">{{ $t('about.desc') }}</div>
@@ -30,7 +35,18 @@ defineExpose({ open })
       <div class="about-divider"></div>
 
       <div class="about-tech">Electron · Vue 3 · Tiptap · CodeMirror 6</div>
-      <div class="about-meta">MIT License · © 2026 liyk</div>
+      <div class="about-meta">MIT License · © 2026 lwinhong</div>
+
+      <div class="about-links">
+        <template v-for="(link, i) in links" :key="link.key">
+          <a
+            class="about-link"
+            href="javascript:void(0)"
+            @click="openExternal(link.url)"
+          >{{ $t(link.key) }}</a>
+          <span v-if="i < links.length - 1" class="about-link-sep">·</span>
+        </template>
+      </div>
 
       <div class="about-actions">
         <NButton size="small" type="primary" @click="show = false">{{ $t('common.close') }}</NButton>
@@ -100,6 +116,30 @@ defineExpose({ open })
   margin-top: 5px;
   font-size: 11px;
   color: var(--kme-text-3);
+}
+
+.about-links {
+  margin-top: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+}
+
+.about-link {
+  color: var(--kme-text-2);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.about-link:hover {
+  color: var(--kme-primary);
+}
+
+.about-link-sep {
+  color: var(--kme-text-4);
+  user-select: none;
 }
 
 .about-actions {

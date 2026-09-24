@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, inject } from 'vue'
 import type { FileNode } from '@shared/types'
-import { MarkdownIcon } from '../editor/tiptap/icons/index.jsx'
+import { MarkdownIcon } from '../editor/tiptap/icons'
+import { IconChevronRight, IconFolder } from '@/components/icons'
 import FileTreeNode from './FileTreeNode.vue'
 
 const props = defineProps<{
@@ -48,15 +49,11 @@ function onChildContext(node: FileNode, x: number, y: number): void {
       @contextmenu.prevent="emit('contextmenu', node, $event.clientX, $event.clientY)"
     >
       <span v-if="node.isDir" class="ft-arrow" :class="{ 'is-open': expanded }">
-        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5">
-          <path d="m9 18 6-6-6-6" />
-        </svg>
+        <IconChevronRight :size="12" :stroke-width="2.5" />
       </span>
       <span v-else class="ft-arrow-spacer" />
       <span v-if="node.isDir" class="ft-icon dir">
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M3 7c0-1.1.9-2 2-2h4l2 2h8c1.1 0 2 .9 2 2v8c0 1.1-.9 2-2 2H5c-1.1 0-2-.9-2-2V7z" />
-        </svg>
+        <IconFolder :size="14" />
       </span>
       <span v-else class="ft-icon file">
         <MarkdownIcon :size="14" />

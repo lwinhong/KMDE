@@ -1,5 +1,13 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref } from 'vue'
+import {
+  IconChevronDown,
+  IconChevronUp,
+  IconClose,
+  IconReplace,
+  IconSearch,
+  IconSwapArrows
+} from '@/components/icons'
 
 const props = withDefaults(
   defineProps<{
@@ -83,10 +91,7 @@ defineExpose({ focus })
   <div class="search-bar" :class="{ 'is-expanded': showReplace }" :style="{ top: `${offsetTop}px` }">
     <div class="search-row">
       <span class="search-icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="11" cy="11" r="7" />
-          <path d="m20 20-3.5-3.5" />
-        </svg>
+        <IconSearch :size="14" />
       </span>
       <input
         ref="findInputRef"
@@ -102,14 +107,10 @@ defineExpose({ focus })
       />
       <span class="search-count">{{ countLabel }}</span>
       <button class="search-icon-btn" :disabled="!total" :title="$t('search.prev')" @click="emit('find-prev')">
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="m18 15-6-6-6 6" />
-        </svg>
+        <IconChevronUp :size="14" />
       </button>
       <button class="search-icon-btn" :disabled="!total" :title="$t('search.next')" @click="emit('find-next')">
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="m6 9 6 6 6-6" />
-        </svg>
+        <IconChevronDown :size="14" />
       </button>
       <button
         class="search-icon-btn is-text"
@@ -125,22 +126,15 @@ defineExpose({ focus })
         :title="$t('search.toggleReplace')"
         @click="toggleReplace"
       >
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M4 7h11a3 3 0 0 1 3 3v0M17 17H6a3 3 0 0 1-3-3v0" />
-          <path d="m14 4 3 3-3 3M7 14l-3 3 3 3" />
-        </svg>
+        <IconSwapArrows :size="14" />
       </button>
       <button class="search-icon-btn" :title="$t('common.close')" @click="emit('close')">
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M18 6 6 18M6 6l12 12" />
-        </svg>
+        <IconClose :size="14" />
       </button>
     </div>
     <div v-if="showReplace" class="search-row replace-row">
       <span class="search-icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M4 7h11a3 3 0 0 1 3 3v0M17 17H6a3 3 0 0 1-3-3v0" />
-        </svg>
+        <IconReplace :size="14" />
       </span>
       <input
         v-model="replacement"

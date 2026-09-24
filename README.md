@@ -8,9 +8,9 @@
 
 **English** | [简体中文](README.zh-CN.md)
 
-A Typora-style Markdown editor for Windows, built with **Electron + Vue 3 + Tiptap**. WYSIWYG and source-code dual-mode editing, workspace file tree with external change detection, session restore with draft recovery, auto-save, bilingual UI (中文 / English), and fully offline HTML / PDF export.
+A Notion-like-style Markdown editor for Windows, built with **Electron + Vue 3 + Tiptap**. WYSIWYG and source-code dual-mode editing, workspace file tree with external change detection, session restore with draft recovery, auto-save, bilingual UI (中文 / English), and fully offline HTML / PDF export.
 
-If you are looking for an open-source, lightweight Typora alternative with live preview WYSIWYG editing, KMDE is for you.
+If you are looking for an open-source, lightweight Notion-like alternative with live preview WYSIWYG editing, KMDE is for you.
 
 ## Features
 

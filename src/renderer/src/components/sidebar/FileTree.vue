@@ -8,6 +8,7 @@ import { useWorkspaceStore } from '../../stores/workspace.store'
 import { useSettingsStore } from '../../stores/settings.store'
 import { dirname, joinPath, relativeTo } from '../../stores/pathUtils'
 import { useFileTree } from '../../composables/useFileTree'
+import { IconChevronLeft, IconClose, IconPlus, IconRefresh } from '@/components/icons'
 import FileTreeNode from './FileTreeNode.vue'
 
 const emit = defineEmits<{
@@ -197,14 +198,10 @@ onScopeDispose(() => {
       <span class="filetree-title" :title="workspace.root ?? ''">{{ workspace.rootName || $t('sidebar.explorer') }}</span>
       <span class="filetree-actions">
         <button class="filetree-action" :title="$t('sidebar.newFile')" @click="newFileAtRoot">
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M12 5v14M5 12h14" />
-          </svg>
+          <IconPlus :size="16" />
         </button>
         <button class="filetree-action" :title="$t('sidebar.refresh')" @click="refreshRoot">
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6" />
-          </svg>
+          <IconRefresh :size="16" />
         </button>
         <button
           v-if="workspace.root"
@@ -214,14 +211,10 @@ onScopeDispose(() => {
           :aria-label="$t('sidebar.closeWorkspace')"
           @click="emit('close-folder')"
         >
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="m6 6 12 12M18 6 6 18" />
-          </svg>
+          <IconClose :size="16" />
         </button>
         <button class="filetree-action" :title="$t('sidebar.collapse')" @click="settings.toggleSidebar()">
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M15 18l-6-6 6-6" />
-          </svg>
+          <IconChevronLeft :size="16" />
         </button>
       </span>
     </div>

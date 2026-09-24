@@ -8,7 +8,7 @@
 
 [English](README.md) | **简体中文**
 
-KMDE 是一款 Typora 风格的桌面 Markdown 编辑器，基于 Electron + Vue 3 + Tiptap 构建。支持所见即所得与源码双模式编辑、工作区文件树与外部变更检测、会话恢复与草稿保全、自动保存、中英双语界面，以及完全离线的 HTML / PDF 导出。
+KMDE 是一款 Notion-like 风格的桌面 Markdown 编辑器，基于 Electron + Vue 3 + Tiptap 构建。支持所见即所得与源码双模式编辑、工作区文件树与外部变更检测、会话恢复与草稿保全、自动保存、中英双语界面，以及完全离线的 HTML / PDF 导出。
 
 ## 功能特性
 

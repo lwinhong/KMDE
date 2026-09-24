@@ -5,7 +5,8 @@ import { NDropdown } from 'naive-ui'
 import type { DropdownOption } from 'naive-ui'
 import { useTabsStore, type EditorTab } from '../../stores/tabs.store'
 import { useWorkspaceStore } from '../../stores/workspace.store'
-import { MarkdownIcon } from '../editor/tiptap/icons/index.jsx'
+import { MarkdownIcon } from '../editor/tiptap/icons'
+import { IconChevronLeft, IconChevronRight, IconClose, IconPlus } from '@/components/icons'
 
 const emit = defineEmits<{
   (e: 'new-file'): void
@@ -138,9 +139,7 @@ function onCtxSelect(key: string | number): void {
         :title="$t('tabbar.scrollLeft')"
         @click="scrollBy(-200)"
       >
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M15 18l-6-6 6-6" />
-        </svg>
+        <IconChevronLeft :size="16" />
       </button>
       <div
         v-for="tab in tabs.tabs"
@@ -160,9 +159,7 @@ function onCtxSelect(key: string | number): void {
         </span>
         <span class="tabbar-tab-dot" v-if="tab.dirty" :class="{ 'is-dirty': tab.dirty }" />
         <button class="tabbar-tab-close" :title="$t('common.close')" @click="onTabClose($event, tab.id)">
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5">
-            <path d="M22 2 2 22 M2 2l20 20" />
-          </svg>
+          <IconClose :size="16" :stroke-width="2.5" />
         </button>
       </div>
       <div class="tabbar-edge-right">
@@ -172,14 +169,10 @@ function onCtxSelect(key: string | number): void {
           :title="$t('tabbar.scrollRight')"
           @click="scrollBy(200)"
         >
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M9 18l6-6-6-6" />
-          </svg>
+          <IconChevronRight :size="16" />
         </button>
         <button class="tabbar-new-btn" :title="$t('tabbar.newFile')" @click="emit('new-file')">
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M12 5v14M5 12h14" />
-          </svg>
+          <IconPlus :size="16" />
         </button>
       </div>
     </div>

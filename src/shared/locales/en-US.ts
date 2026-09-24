@@ -67,8 +67,11 @@ export default {
     theme: 'Dark/Light Theme'
   },
   about: {
-    desc: 'A Typora-style Markdown editor',
-    version: 'Version {version}'
+    desc: 'A Notion-like-style Markdown editor',
+    version: 'Version {version}',
+    github: 'GitHub',
+    issues: 'Issues',
+    releases: 'Releases'
   },
   statusbar: {
     unsaved: 'Unsaved',
