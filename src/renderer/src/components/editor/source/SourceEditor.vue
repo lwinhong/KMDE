@@ -32,6 +32,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'update', markdown: string): void
   (e: 'outline-change', items: OutlineItem[], activeId: string | null): void
+  (e: 'scroll'): void
 }>()
 
 const settings = useSettingsStore()
@@ -335,6 +336,10 @@ function getSelectedText(): string {
   return view.state.sliceDoc(from, to)
 }
 
+function handleScroll(): void {
+  emit('scroll')
+}
+
 onMounted(() => {
   if (!hostRef.value) return
   view = new EditorView({
@@ -344,6 +349,7 @@ onMounted(() => {
     }),
     parent: hostRef.value
   })
+  view.scrollDOM.addEventListener('scroll', handleScroll, { passive: true })
   const saved = props.tab.selection
   if (saved?.mode === 'source') {
     const clamp = (pos: number): number => Math.max(0, Math.min(pos, view!.state.doc.length))
@@ -354,6 +360,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   flush()
+  view?.scrollDOM.removeEventListener('scroll', handleScroll)
   view?.destroy()
   view = null
 })
@@ -385,6 +392,19 @@ watch(
   }
 )
 
+function getScrollLine(): number {
+  if (!view) return 1
+  const block = view.lineBlockAtHeight(view.scrollDOM.scrollTop)
+  return view.state.doc.lineAt(block.from).number
+}
+
+function scrollToLine(line: number): void {
+  if (!view) return
+  const clamped = Math.min(Math.max(1, Math.round(line)), view.state.doc.lines)
+  const pos = view.state.doc.line(clamped).from
+  view.dispatch({ effects: EditorView.scrollIntoView(pos, { y: 'start' }) })
+}
+
 defineExpose({
   getSelection,
   whenReady,
@@ -394,6 +414,8 @@ defineExpose({
   flush,
   jumpTo,
   emitOutline,
+  getScrollLine,
+  scrollToLine,
   searchUpdate,
   searchNext,
   searchPrev,

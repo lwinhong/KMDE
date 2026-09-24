@@ -1,54 +1,54 @@
 export interface ScrollSyncHandle {
   destroy: () => void
+  /** 源侧（第一个编辑器）滚动时调用。 */
+  syncFromFirst: () => void
+  /** 源侧（第二个编辑器）滚动时调用。 */
+  syncFromSecond: () => void
+}
+
+export interface ScrollEndpoint {
+  getLine: () => number
+  scrollToLine: (line: number) => void
 }
 
 export interface ScrollSyncOptions {
   /** 可注入时钟，便于测试程序滚动抑制窗口。 */
   now?: () => number
-  /** 程序设置对侧 scrollTop 后，其 scroll 事件在该窗口内视为回声并被忽略。 */
+  /** 程序滚动目标侧后，其回声滚动在该窗口内被忽略。 */
   ignoreWindowMs?: number
 }
 
 const DEFAULT_IGNORE_WINDOW_MS = 150
 
 /**
- * 按比例双向联动两个滚动容器（分屏左视图 / 右源码）。
- * 程序设置对侧 scrollTop 触发的 scroll 事件在时间窗内被忽略，避免 A→B→A 回环振荡。
+ * 按行号双向联动两个编辑器（分屏所见即所得 / 源码）。
+ *
+ * 滚动事件由编辑器内部监听并通知（见 SplitEditor 的 @scroll 转发），
+ * 这里只负责「读源侧可视行号 → 滚到目标侧同一行号」，并在时间窗内抑制回声，
+ * 避免"按全局比例"在内容高度差异大时内容对不上的问题。
  */
 export function createScrollSync(
-  first: HTMLElement,
-  second: HTMLElement,
+  first: ScrollEndpoint,
+  second: ScrollEndpoint,
   options: ScrollSyncOptions = {}
 ): ScrollSyncHandle {
   const now = options.now ?? (() => performance.now())
   const ignoreWindowMs = options.ignoreWindowMs ?? DEFAULT_IGNORE_WINDOW_MS
 
-  let lastProgrammatic: { target: HTMLElement; time: number } | null = null
+  let lastProgrammatic: { target: ScrollEndpoint; time: number } | null = null
 
-  function link(source: HTMLElement, target: HTMLElement): () => void {
-    return () => {
-      const time = now()
-      if (lastProgrammatic && lastProgrammatic.target === source && time - lastProgrammatic.time < ignoreWindowMs) return
-      // 源内容不足一屏时没有可同步的滚动量；另一侧保持原位即可。
-      const from = source.scrollHeight - source.clientHeight
-      if (from <= 0) return
-      const ratio = source.scrollTop / from
-      const to = target.scrollHeight - target.clientHeight
-      if (to <= 0) return
-      lastProgrammatic = { target, time }
-      target.scrollTop = ratio * to
-    }
+  function syncFrom(source: ScrollEndpoint, target: ScrollEndpoint): void {
+    const time = now()
+    if (lastProgrammatic && lastProgrammatic.target === source && time - lastProgrammatic.time < ignoreWindowMs) return
+    const line = source.getLine()
+    lastProgrammatic = { target, time }
+    target.scrollToLine(line)
   }
 
-  const onFirst = link(first, second)
-  const onSecond = link(second, first)
-  first.addEventListener('scroll', onFirst, { passive: true })
-  second.addEventListener('scroll', onSecond, { passive: true })
-
   return {
+    syncFromFirst: () => syncFrom(first, second),
+    syncFromSecond: () => syncFrom(second, first),
     destroy() {
-      first.removeEventListener('scroll', onFirst)
-      second.removeEventListener('scroll', onSecond)
       lastProgrammatic = null
     }
   }

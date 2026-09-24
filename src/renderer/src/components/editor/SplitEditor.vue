@@ -21,6 +21,8 @@ interface PaneInstance {
   flush: () => string
   jumpTo: (item: OutlineItem) => void
   emitOutline: () => void
+  getScrollLine: () => number
+  scrollToLine: (line: number) => void
   searchUpdate: (query: string, caseSensitive: boolean) => SearchState
   searchNext: () => SearchState
   searchPrev: () => SearchState
@@ -58,13 +60,25 @@ onMounted(async () => {
     wysiwygRef.value?.whenReady() ?? Promise.resolve(false),
     sourceRef.value?.whenReady() ?? Promise.resolve(false)
   ])
-  const wysEl = wysOk ? wysiwygRef.value?.getScrollElement() ?? null : null
-  const srcEl = srcOk ? sourceRef.value?.getScrollElement() ?? null : null
   // 等待就绪期间组件可能已被卸载或仍在后台页签，此时不挂联动。
-  if (rootRef.value?.isConnected && wysEl && srcEl) {
-    scrollSync = createScrollSync(wysEl, srcEl)
+  if (rootRef.value?.isConnected && wysOk && srcOk && wysiwygRef.value && sourceRef.value) {
+    const wys = wysiwygRef.value
+    const src = sourceRef.value
+    scrollSync = createScrollSync(
+      { getLine: () => wys.getScrollLine(), scrollToLine: (l) => wys.scrollToLine(l) },
+      { getLine: () => src.getScrollLine(), scrollToLine: (l) => src.scrollToLine(l) }
+    )
   }
 })
+
+// 滚动事件由两个编辑器内部监听后转发（避免外部绑定错元素导致单侧失效）。
+function onWysScroll(): void {
+  scrollSync?.syncFromFirst()
+}
+
+function onSrcScroll(): void {
+  scrollSync?.syncFromSecond()
+}
 
 onBeforeUnmount(() => {
   scrollSync?.destroy()
@@ -200,6 +214,7 @@ defineExpose({
         @update="onEditorUpdate"
         @outline-change="onWysiwygOutline"
         @toggle-mode="emit('toggle-mode')"
+        @scroll="onWysScroll"
       />
     </div>
     <Resizer side="left" @resize="onPaneResize" />
@@ -211,6 +226,7 @@ defineExpose({
         :locked="locked"
         @update="onEditorUpdate"
         @outline-change="onSourceOutline"
+        @scroll="onSrcScroll"
       />
     </div>
   </div>

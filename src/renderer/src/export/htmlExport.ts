@@ -80,6 +80,7 @@ pre {
 pre code { background: transparent; padding: 0; font-size: 0.85em; }
 table { border-collapse: separate; border-spacing: 0; margin: 1em 0; display: block; width: max-content; max-width: 100%; overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; }
 th, td { border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 6px 13px; }
+th p, td p { margin: 0; }
 th:last-child, td:last-child { border-right: none; }
 tr:last-child td { border-bottom: none; }
 th { background: var(--code-bg); font-weight: 600; }

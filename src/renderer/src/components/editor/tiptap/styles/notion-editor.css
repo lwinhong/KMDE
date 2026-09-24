@@ -210,6 +210,12 @@
   border-bottom: 1px solid var(--kme-border);
 }
 
+/* tiptap 单元格内容是块级 <p>，清除其默认 1em 外边距，避免行高过大 */
+.notion-editor-prosemirror td p,
+.notion-editor-prosemirror th p {
+  margin: 0;
+}
+
 .notion-editor-prosemirror .selectedCell::after {
   background: var(--kme-primary-weak);
   content: '';

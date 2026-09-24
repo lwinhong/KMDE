@@ -10,6 +10,7 @@ import type { EditorTab } from '@/stores/tabs.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
 import { dirname, joinPath } from '@/stores/pathUtils'
 import { buildEditorExtensions } from './extensions'
+import { buildNodeLineMap, nodeIndexForLine } from '@/utils/blockLines'
 import {
   AddColumnBeforeIcon,
   AddColumnAfterIcon,
@@ -34,6 +35,7 @@ const emit = defineEmits<{
   (e: 'update', markdown: string): void
   (e: 'outline-change', items: OutlineItem[], activeId: string | null): void
   (e: 'toggle-mode'): void
+  (e: 'scroll'): void
 }>()
 
 const workspace = useWorkspaceStore()
@@ -424,11 +426,19 @@ function doUpdateTableToolbar(): void {
   }
 }
 
+let scrollEl: HTMLElement | null = null
+
+function handleContentScroll(): void {
+  emit('scroll')
+}
+
 onMounted(() => {
   window.addEventListener('resize', updateTableToolbar)
   nextTick(() => {
+    scrollEl = editorContentRef.value
     wrapperRef.value?.addEventListener('scroll', updateTableToolbar, { passive: true })
-    editorContentRef.value?.addEventListener('scroll', updateTableToolbar, { passive: true })
+    scrollEl?.addEventListener('scroll', updateTableToolbar, { passive: true })
+    scrollEl?.addEventListener('scroll', handleContentScroll, { passive: true })
   })
 })
 
@@ -439,9 +449,98 @@ onBeforeUnmount(() => {
   if (tableToolbarRaf) cancelAnimationFrame(tableToolbarRaf)
   window.removeEventListener('resize', updateTableToolbar)
   wrapperRef.value?.removeEventListener('scroll', updateTableToolbar)
-  editorContentRef.value?.removeEventListener('scroll', updateTableToolbar)
+  scrollEl?.removeEventListener('scroll', updateTableToolbar)
+  scrollEl?.removeEventListener('scroll', handleContentScroll)
+  scrollEl = null
   editor.value?.destroy()
 })
+
+let nodeLineCache: { md: string; map: number[] } = { md: '', map: [] }
+
+// 用当前文档顶级节点的文本内容在 markdown 中顺序定位，得到「节点索引 → 起始行号」映射。
+// 映射源必须是 CodeMirror 侧的 markdown（行号以它为准），缓存以它为 key。
+function getNodeLineMap(): number[] {
+  const e = editor.value
+  if (!e || e.isDestroyed) return []
+  const md = props.tab.markdown
+  if (nodeLineCache.md === md && nodeLineCache.map.length) return nodeLineCache.map
+  const doc = e.state.doc
+  const texts: string[] = []
+  for (let i = 0; i < doc.childCount; i++) texts.push(doc.child(i).textContent)
+  const map = buildNodeLineMap(texts, md)
+  nodeLineCache = { md, map }
+  return map
+}
+
+function getScrollLine(): number {
+  const content = editorContentRef.value
+  const view = editor.value?.view
+  if (!content || !view) return 1
+  const doc = view.state.doc
+  const map = getNodeLineMap()
+  if (map.length === 0) return 1
+  const contentRect = content.getBoundingClientRect()
+  const domRect = view.dom.getBoundingClientRect()
+
+  // 快速路径：探测点取内容区左边缘（跳过 padding）与可见顶部，避开 padding 与行内空白。
+  const firstBlock = view.dom.firstElementChild as HTMLElement | null
+  const blockTop = firstBlock ? firstBlock.getBoundingClientRect().top : domRect.top
+  const left = Math.max(domRect.left, contentRect.left) + 40
+  const top = Math.max(blockTop, contentRect.top) + 2
+  let pos = view.posAtCoords({ left, top })
+
+  // 回退：posAtCoords 探测落空时，遍历块起始坐标找首个可见块。
+  if (pos == null) {
+    let off = 0
+    for (let i = 0; i < doc.childCount; i++) {
+      const c = view.coordsAtPos(Math.min(off + 1, doc.content.size))
+      if (c && c.bottom > contentRect.top) {
+        pos = off + 1
+        break
+      }
+      off += doc.child(i).nodeSize
+    }
+  }
+  if (pos == null) return 1
+
+  let offset = 0
+  for (let i = 0; i < doc.childCount; i++) {
+    const child = doc.child(i)
+    if (pos < offset + child.nodeSize) {
+      const startLine = map[i] ?? 1
+      const nextLine = map[i + 1]
+      // 节点内按 pos 比例插值，避免长节点（如大代码块）只对齐到起始行。
+      if (nextLine === undefined || nextLine <= startLine || child.nodeSize <= 0) return startLine
+      const ratio = (pos - offset) / child.nodeSize
+      return startLine + ratio * (nextLine - startLine)
+    }
+    offset += child.nodeSize
+  }
+  return 1
+}
+
+function scrollToLine(line: number): void {
+  const view = editor.value?.view
+  const content = editorContentRef.value
+  if (!view || !content) return
+  const map = getNodeLineMap()
+  if (map.length === 0) return
+  const doc = view.state.doc
+  const i = Math.min(nodeIndexForLine(map, line), doc.childCount - 1)
+  let offset = 0
+  for (let k = 0; k < i; k++) offset += doc.child(k).nodeSize
+  const startCoords = view.coordsAtPos(Math.min(offset + 1, doc.content.size))
+  let targetY = startCoords.top
+  const nextLine = map[i + 1]
+  if (nextLine !== undefined && nextLine > map[i]) {
+    const ratio = Math.min(1, Math.max(0, (line - map[i]) / (nextLine - map[i])))
+    const nextCoords = view.coordsAtPos(Math.min(offset + doc.child(i).nodeSize + 1, doc.content.size))
+    targetY = startCoords.top + ratio * (nextCoords.top - startCoords.top)
+  }
+  const contentRect = content.getBoundingClientRect()
+  const targetTop = targetY - contentRect.top + content.scrollTop - 2
+  content.scrollTo({ top: Math.max(0, targetTop) })
+}
 
 defineExpose({
   getSelection,
@@ -452,6 +551,8 @@ defineExpose({
   flush,
   jumpTo,
   emitOutline,
+  getScrollLine,
+  scrollToLine,
   searchUpdate,
   searchNext,
   searchPrev,

@@ -1,3 +1,38 @@
+<script lang="ts">
+/* ---------------------------------------------------------------
+ * mermaid 渲染服务（真正的模块级作用域，所有实例共享）。
+ *
+ * 注意：`<script setup>` 的顶层代码会被编译进 setup() 函数体，
+ * 属于实例级状态，不能放共享单例。
+ *
+ * mermaid 是全局单例：并发的 initialize/render 会互相打断，且
+ * mermaid.render 开头会按 id 删除文档中已存在的同名元素
+ * （removeExistingElements -> getElementById(id).remove()）。
+ * 如果每个实例各自维护 ID 计数器，首次渲染都会拿到相同 ID，
+ * 后一次渲染会把已插入文档的前一个 SVG 删掉——这正是"打开
+ * 文档所有图表空白、切换一次后又出现"的根因。因此：
+ *  1. 模块只动态 import 一次，全局复用；
+ *  2. 所有渲染请求进入全局串行队列，逐个执行；
+ *  3. 渲染 ID 全局递增，避免任何两次渲染产生相同 ID；
+ *  4. initialize 仅在主题真正变化时调用（且在队列内执行）。
+ * --------------------------------------------------------------- */
+let mermaidModule: Promise<typeof import('mermaid')> | null = null
+let renderChain: Promise<unknown> = Promise.resolve()
+let mermaidIdSeq = 0
+let mermaidTheme: string | null = null
+
+function loadMermaid(): Promise<typeof import('mermaid')> {
+  if (!mermaidModule) mermaidModule = import('mermaid')
+  return mermaidModule
+}
+
+function enqueueRender(task: () => Promise<void>): Promise<void> {
+  const run = renderChain.then(task, task)
+  renderChain = run.catch(() => undefined)
+  return run
+}
+</script>
+
 <script setup lang="ts">
 import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import { NodeViewContent, nodeViewProps, NodeViewWrapper } from '@tiptap/vue-3'
@@ -25,32 +60,6 @@ const svg = ref('')
 const mermaidError = ref('')
 let renderTimer: ReturnType<typeof setTimeout> | null = null
 let renderSeq = 0
-
-/* ---------------------------------------------------------------
- * mermaid 渲染服务（模块级）
- * mermaid 是全局单例：并发的 initialize/render 会互相打断（典型
- * 表现：打开文档时所有图表同时首次渲染导致全部空白，切换一次
- * 图表/源码后单个重渲染才出现）。因此：
- *  1. 模块只动态 import 一次，全局复用；
- *  2. 所有渲染请求进入串行队列，逐个执行；
- *  3. 渲染 ID 全局递增，避免多个节点视图产生相同 ID；
- *  4. initialize 仅在主题真正变化时调用（且在队列内执行）。
- * --------------------------------------------------------------- */
-let mermaidModule: Promise<typeof import('mermaid')> | null = null
-let renderChain: Promise<unknown> = Promise.resolve()
-let mermaidIdSeq = 0
-let mermaidTheme: string | null = null
-
-function loadMermaid(): Promise<typeof import('mermaid')> {
-  if (!mermaidModule) mermaidModule = import('mermaid')
-  return mermaidModule
-}
-
-function enqueueRender(task: () => Promise<void>): Promise<void> {
-  const run = renderChain.then(task, task)
-  renderChain = run.catch(() => undefined)
-  return run
-}
 
 async function renderMermaid(): Promise<void> {
   if (!isMermaid.value || !previewMode.value) return
@@ -80,6 +89,7 @@ async function renderMermaid(): Promise<void> {
         mermaidError.value = ''
       }
     } catch (err) {
+      console.error('[MermaidCodeBlock] render error:', err)
       if (seq === renderSeq) {
         svg.value = ''
         mermaidError.value = err instanceof Error ? err.message : String(err)
@@ -163,7 +173,6 @@ function resetZoom(): void {
 }
 
 function onPreviewWheel(event: WheelEvent): void {
-  if (!event.ctrlKey && !event.metaKey) return
   event.preventDefault()
   zoomBy(event.deltaY < 0 ? ZOOM_STEP : 1 / ZOOM_STEP)
 }
