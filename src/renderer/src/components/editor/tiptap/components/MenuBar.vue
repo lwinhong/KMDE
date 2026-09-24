@@ -18,7 +18,7 @@
     >
       <template #trigger>
         <ToolbarButton class="more-btn" :title="$t('editor.more')">
-          <MoreIcon :size="18" />
+          <IconMore :size="18" />
         </ToolbarButton>
       </template>
       <div class="toolbar-overflow-menu" :class="{ 'source-mode': sourceMode }" @click.stop>
@@ -61,7 +61,7 @@ import LinkPopover from './LinkPopover.vue'
 import ImageInsert from './ImageInsert.vue'
 import TableMenu from './TableMenu.vue'
 import HighlightPicker from './HighlightPicker.vue'
-import { MoreIcon, MarkdownIcon } from '../icons'
+import { IconMore, IconMarkdown } from '@/components/icons'
 import { t } from '@/i18n'
 import './toolbar.css'
 
@@ -83,7 +83,7 @@ const SourceToggle = (itemProps) =>
       title: itemProps.title,
       onClick: itemProps.onToggle
     },
-    { default: () => h(MarkdownIcon, { size: 18 }) }
+    { default: () => h(IconMarkdown, { size: 18 }) }
   )
 SourceToggle.props = ['active', 'title', 'onToggle']
 

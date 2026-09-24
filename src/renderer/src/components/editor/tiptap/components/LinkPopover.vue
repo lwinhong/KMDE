@@ -2,7 +2,7 @@
   <ToolbarDropdown align-right>
     <template #trigger="{ toggle }">
       <ToolbarButton :is-active="editor?.isActive('link')" :title="$t('editor.link')" @click="handleToggle(toggle)">
-        <LinkIcon :size="size" />
+        <IconLink :size="size" />
       </ToolbarButton>
     </template>
     <template #default="{ close }">
@@ -18,10 +18,10 @@
         </div>
         <div class="link-form-actions">
           <button v-if="editor?.isActive('link')" class="link-form-btn" :title="$t('editor.openInNewWindow')" @click="openLink">
-            <ExternalLinkIcon size="16" />
+            <IconExternalLink size="16" />
           </button>
           <button v-if="editor?.isActive('link')" class="link-form-btn danger" :title="$t('editor.removeLink')" @click="removeLink(close)">
-            <TrashIcon size="16" />
+            <IconTrash size="16" />
           </button>
           <span class="link-form-divider-v" />
           <button class="link-form-btn" @click="close">{{ $t('common.close') }}</button>
@@ -35,7 +35,7 @@
 <script setup>
 import { ref, nextTick, computed } from 'vue'
 import { ToolbarButton, ToolbarDropdown } from './primitives'
-import { LinkIcon, ExternalLinkIcon, TrashIcon } from '../icons'
+import { IconLink, IconExternalLink, IconTrash } from '@/components/icons'
 
 const props = defineProps({
   editor: Object,

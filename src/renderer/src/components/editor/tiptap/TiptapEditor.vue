@@ -12,14 +12,14 @@ import { dirname, joinPath } from '@/stores/pathUtils'
 import { buildEditorExtensions } from './extensions'
 import { buildNodeLineMap, nodeIndexForLine } from '@/utils/blockLines'
 import {
-  AddColumnBeforeIcon,
-  AddColumnAfterIcon,
-  AddRowBeforeIcon,
-  AddRowAfterIcon,
-  DeleteColumnIcon,
-  DeleteRowIcon,
-  DeleteTableIcon
-} from './icons'
+  IconAddColumnBefore,
+  IconAddColumnAfter,
+  IconAddRowBefore,
+  IconAddRowAfter,
+  IconDeleteColumn,
+  IconDeleteRow,
+  IconDeleteTable
+} from '@/components/icons'
 import MenuBar from './components/MenuBar.vue'
 import LinkPopover from './components/LinkPopover.vue'
 import MarkButtons from './components/MarkButtons.vue'
@@ -571,33 +571,33 @@ defineExpose({
         <div v-if="tableToolbarVisible && editor" class="notion-table-toolbar" :style="tableToolbarStyle" :inert="locked">
           <button class="ntb-btn" :title="$t('editor.addColBefore')"
             @click="editor.chain().focus().addColumnBefore().run()">
-            <AddColumnBeforeIcon :size="18" />
+            <IconAddColumnBefore :size="18" />
           </button>
           <button class="ntb-btn" :title="$t('editor.addColAfter')"
             @click="editor.chain().focus().addColumnAfter().run()">
-            <AddColumnAfterIcon :size="18" />
+            <IconAddColumnAfter :size="18" />
           </button>
           <div class="ntb-divider" />
           <button class="ntb-btn" :title="$t('editor.addRowAbove')"
             @click="editor.chain().focus().addRowBefore().run()">
-            <AddRowBeforeIcon :size="18" />
+            <IconAddRowBefore :size="18" />
           </button>
           <button class="ntb-btn" :title="$t('editor.addRowBelow')" @click="editor.chain().focus().addRowAfter().run()">
-            <AddRowAfterIcon :size="18" />
+            <IconAddRowAfter :size="18" />
           </button>
           <div class="ntb-divider" />
           <button class="ntb-btn" :disabled="!editor.can().deleteColumn()" :title="$t('editor.deleteColumn')"
             @click="editor.chain().focus().deleteColumn().run()">
-            <DeleteColumnIcon :size="18" />
+            <IconDeleteColumn :size="18" />
           </button>
           <button class="ntb-btn" :disabled="!editor.can().deleteRow()" :title="$t('editor.deleteRow')"
             @click="editor.chain().focus().deleteRow().run()">
-            <DeleteRowIcon :size="18" />
+            <IconDeleteRow :size="18" />
           </button>
           <div class="ntb-divider" />
           <button class="ntb-btn ntb-danger" :title="$t('editor.deleteTable')"
             @click="editor.chain().focus().deleteTable().run()">
-            <DeleteTableIcon :size="18" />
+            <IconDeleteTable :size="18" />
           </button>
         </div>
       </Teleport>

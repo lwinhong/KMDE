@@ -9,7 +9,7 @@
 
 <script setup>
 import { ToolbarButton, ToolbarGroup } from './primitives'
-import { BoldIcon, ItalicIcon, StrikeIcon, CodeIcon, UnderlineIcon } from '../icons'
+import { IconBold, IconItalic, IconStrike, IconCode, IconUnderline } from '@/components/icons'
 
 defineProps({
   editor: Object, size: {
@@ -19,9 +19,9 @@ defineProps({
 })
 
 const marks = [
-  { type: 'bold', icon: BoldIcon, titleKey: 'editor.bold', command: 'toggleBold' },
-  { type: 'italic', icon: ItalicIcon, titleKey: 'editor.italic', command: 'toggleItalic' },
-  { type: 'strike', icon: StrikeIcon, titleKey: 'editor.strike', command: 'toggleStrike' },
-  { type: 'underline', icon: UnderlineIcon, titleKey: 'editor.underline', command: 'toggleUnderline' },
+  { type: 'bold', icon: IconBold, titleKey: 'editor.bold', command: 'toggleBold' },
+  { type: 'italic', icon: IconItalic, titleKey: 'editor.italic', command: 'toggleItalic' },
+  { type: 'strike', icon: IconStrike, titleKey: 'editor.strike', command: 'toggleStrike' },
+  { type: 'underline', icon: IconUnderline, titleKey: 'editor.underline', command: 'toggleUnderline' },
 ]
 </script>

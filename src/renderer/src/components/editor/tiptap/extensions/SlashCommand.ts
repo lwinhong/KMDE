@@ -7,16 +7,16 @@ import type { Component } from 'vue'
 import { renderToString } from 'vue/server-renderer'
 import { t } from '@/i18n'
 import {
-  HeadingIcon,
-  ListBulletIcon,
-  ListOrderedIcon,
-  ListTodoIcon,
-  BlockquoteIcon,
-  CodeBlockIcon,
-  HorizontalRuleIcon,
-  ImagePlusIcon,
-  TableIcon,
-} from '../icons'
+  IconHeading,
+  IconListBullet,
+  IconListOrdered,
+  IconListTodo,
+  IconBlockquote,
+  IconCodeBlock,
+  IconHorizontalRule,
+  IconImagePlus,
+  IconTable,
+} from '@/components/icons'
 import './slash-command.css'
 
 export const SlashCommandPluginKey = new PluginKey('slash-command')
@@ -39,15 +39,15 @@ function renderIcon(iconComponent: Component): Promise<string> {
 }
 
 const iconComponents: Record<string, Component> = {
-  heading: HeadingIcon,
-  listBullet: ListBulletIcon,
-  listOrdered: ListOrderedIcon,
-  listTodo: ListTodoIcon,
-  blockquote: BlockquoteIcon,
-  codeBlock: CodeBlockIcon,
-  horizontalRule: HorizontalRuleIcon,
-  table: TableIcon,
-  imagePlus: ImagePlusIcon,
+  heading: IconHeading,
+  listBullet: IconListBullet,
+  listOrdered: IconListOrdered,
+  listTodo: IconListTodo,
+  blockquote: IconBlockquote,
+  codeBlock: IconCodeBlock,
+  horizontalRule: IconHorizontalRule,
+  table: IconTable,
+  imagePlus: IconImagePlus,
 }
 
 async function renderIcons(): Promise<Record<string, string>> {

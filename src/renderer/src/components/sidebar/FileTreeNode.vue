@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { computed, inject } from 'vue'
 import type { FileNode } from '@shared/types'
-import { MarkdownIcon } from '../editor/tiptap/icons'
-import { IconChevronRight, IconFolder } from '@/components/icons'
+import { IconChevronRight, IconFolder, IconMarkdown } from '@/components/icons'
 import FileTreeNode from './FileTreeNode.vue'
 
 const props = defineProps<{
@@ -56,7 +55,7 @@ function onChildContext(node: FileNode, x: number, y: number): void {
         <IconFolder :size="14" />
       </span>
       <span v-else class="ft-icon file">
-        <MarkdownIcon :size="14" />
+        <IconMarkdown :size="14" />
       </span>
       <span class="ft-label" :title="node.name">{{ node.name }}</span>
       <span v-if="loading" class="ft-loading">…</span>

@@ -4,11 +4,11 @@ import type { TestContext } from 'node:test'
 import { setImmediate as nextTurn } from 'node:timers/promises'
 import { createPinia, disposePinia, setActivePinia } from 'pinia'
 import { nextTick } from 'vue'
-import type { KmdeApi } from '../../../preload'
-import type { AppSettings, FileNode } from '@shared/types'
-import { useSettingsStore } from './settings.store'
-import { useTabsStore } from './tabs.store'
-import { useWorkspaceStore } from './workspace.store'
+import type { KmdeApi } from '../../../../preload'
+import type { AppSettings, QuickOpenEntry, WorkspaceIndexChunk } from '@shared/types'
+import { useSettingsStore } from '../settings.store'
+import { useTabsStore } from '../tabs.store'
+import { useWorkspaceStore, collectNonEmptyDirs } from '../workspace.store'
 
 function deferred<T>() {
   let resolve!: (value: T | PromiseLike<T>) => void
@@ -17,23 +17,35 @@ function deferred<T>() {
   return { promise, resolve, reject }
 }
 
-function file(path: string, isDir = false): FileNode {
-  return { path, name: path.split('/').at(-1)!, isDir, ext: isDir ? '' : '.md' }
+function entry(path: string): QuickOpenEntry {
+  const fileName = path.split('/').at(-1)!
+  return { path, fileName, relPath: fileName }
 }
 
 function fixture(t: TestContext) {
   t.mock.timers.enable({ apis: ['setTimeout'] })
   const saved: AppSettings[] = []
+  const indexListeners = new Set<(chunk: WorkspaceIndexChunk) => void>()
+  let indexGeneration = 0
   const api = {
-    listDir: t.mock.fn(async (_path: string): Promise<FileNode[]> => []),
     watchWorkspace: t.mock.fn(async (_root: string): Promise<boolean> => true),
     unwatchWorkspace: t.mock.fn(async (): Promise<boolean> => true),
+    indexWorkspace: t.mock.fn(async (_root: string): Promise<number> => ++indexGeneration),
+    cancelIndexWorkspace: t.mock.fn(async (): Promise<boolean> => true),
+    onIndexChunk: t.mock.fn((callback: (chunk: WorkspaceIndexChunk) => void): (() => void) => {
+      indexListeners.add(callback)
+      return () => { indexListeners.delete(callback) }
+    }),
     saveSettings: t.mock.fn(async (settings: AppSettings): Promise<boolean> => {
       saved.push({ ...settings })
       return true
     }),
     readFile: t.mock.fn(async () => ({ content: '磁盘内容', mtimeMs: 1 }))
-  } satisfies Pick<KmdeApi, 'listDir' | 'watchWorkspace' | 'unwatchWorkspace' | 'saveSettings' | 'readFile'>
+  } satisfies Pick<
+    KmdeApi,
+    'watchWorkspace' | 'unwatchWorkspace' | 'indexWorkspace' | 'cancelIndexWorkspace' |
+    'onIndexChunk' | 'saveSettings' | 'readFile'
+  >
   const originalWindow = Object.getOwnPropertyDescriptor(globalThis, 'window')
   const kmde = new Proxy(api, {
     get(target, key, receiver) {
@@ -56,6 +68,9 @@ function fixture(t: TestContext) {
   })
   return {
     store, settings, api, saved, pinia,
+    emitChunk(chunk: WorkspaceIndexChunk): void {
+      for (const listener of [...indexListeners]) listener(chunk)
+    },
     async advance(ms = 0) {
       await nextTick()
       t.mock.timers.tick(ms)
@@ -65,104 +80,73 @@ function fixture(t: TestContext) {
   }
 }
 
-// 使用真实 Pinia/Vue 和真实 action，仅模拟 IPC 与时钟；由 renderer runner 内存转译。
+// 使用真实 Pinia/Vue 和真实 action，仅模拟 IPC 与时钟；索引遍历在主进程完成，
+// 渲染端契约变为：订阅分块 → 累积 → done 时一次性发布。
 describe('工作区生命周期与后台索引', { concurrency: false, timeout: 5000 }, () => {
-  test('打开不等待扫描，首轮及每 200 项主动让出 UI', async (t) => {
+  test('collectNonEmptyDirs 标记含文件的所有祖先目录，根级文件不产生目录', () => {
+    const dirs = collectNonEmptyDirs('C:\\A', [
+      { path: 'C:/A/root.md', fileName: 'root.md', relPath: 'root.md' },
+      { path: 'C:/A/b/c/d.md', fileName: 'd.md', relPath: 'b/c/d.md' },
+      { path: 'C:/A/b/e.md', fileName: 'e.md', relPath: 'b/e.md' }
+    ])
+    assert.deepEqual([...dirs].sort(), ['C:/A/b', 'C:/A/b/c'])
+    assert.deepEqual([...collectNonEmptyDirs('C:/A', [])], [])
+  })
+
+  test('打开不等待索引完成；分块累积，done 后一次性发布', async (t) => {
     const env = fixture(t)
-    const reading = deferred<FileNode[]>()
-    t.mock.method(env.api, 'listDir', () => reading.promise)
-    await env.store.openFolder('C:/A')
+    const opening = env.store.openFolder('C:/A')
     assert.equal(env.store.root, 'C:/A')
     assert.equal(env.store.rootName, 'A')
     assert.equal(env.store.indexing, true)
-    assert.equal(env.api.listDir.mock.callCount(), 0, '打开操作先完成，扫描在下一轮启动')
-    await env.advance()
-    reading.resolve(Array.from({ length: 450 }, (_, i) => file(`C:/A/${i}.md`)))
-    await nextTurn()
+    assert.equal(env.api.indexWorkspace.mock.callCount(), 1, '打开过程中即发起主进程扫描')
+    await opening
+    assert.equal(env.store.indexing, true, '打开完成不依赖索引完成')
+    env.emitChunk({ generation: 1, entries: [entry('C:/A/a.md'), entry('C:/A/b.md')], done: false })
     assert.equal(env.store.indexing, true)
-    assert.equal(env.store.fileIndex.length, 0)
-    await env.advance()
-    assert.equal(env.store.indexing, true, '400 项后仍应让出一次 UI')
-    await env.advance()
+    assert.equal(env.store.fileIndex.length, 0, '完成前不发布部分结果')
+    env.emitChunk({ generation: 1, entries: [entry('C:/A/c.md')], done: true })
     assert.equal(env.store.indexing, false)
-    assert.equal(env.store.fileIndex.length, 450)
-    assert.equal(env.store.fileIndex[449].relPath, '449.md')
+    assert.equal(env.store.fileIndex.length, 3)
+    assert.equal(env.store.fileIndex[2].relPath, 'c.md')
   })
 
-  test('递归读取并发为 4，切换时旧请求仍占配额且不再派生扫描', async (t) => {
+  test('切换目录取消旧索引，迟到分块不能回填', async (t) => {
     const env = fixture(t)
-    const pending: Array<ReturnType<typeof deferred<FileNode[]>>> = []
-    let active = 0
-    let peak = 0
-    t.mock.method(env.api, 'listDir', async (path: string) => {
-      if (path === 'C:/A') return Array.from({ length: 12 }, (_, i) => file(`C:/A/d${i}`, true))
-      peak = Math.max(peak, ++active)
-      const read = deferred<FileNode[]>()
-      pending.push(read)
-      try { return await read.promise } finally { active-- }
-    })
     await env.store.openFolder('C:/A')
-    await env.advance()
-    await env.advance()
-    assert.equal(active, 4)
     await env.store.openFolder('C:/B')
-    await env.advance()
-    assert.equal(active, 4)
-    assert.equal(pending.length, 4)
-    pending[0].resolve([file('C:/A/old', true)])
-    await nextTurn()
-    assert.equal(pending.length, 5)
-    assert.equal(active, 4)
-    for (const read of pending) read.resolve([])
-    await nextTurn()
-    assert.equal(peak, 4)
-    assert.equal(env.store.root, 'C:/B')
-    assert.equal(env.store.indexing, false)
+    assert.equal(env.api.cancelIndexWorkspace.mock.callCount(), 1)
+    env.emitChunk({ generation: 1, entries: [entry('C:/A/old.md')], done: true })
     assert.deepEqual(env.store.fileIndex, [])
-    assert.ok(env.api.listDir.mock.calls.every(({ arguments: args }) => args[0] !== 'C:/A/old'))
-  })
-
-  test('A-B-A 使用请求代次而非路径比较，迟到结果不能回填', async (t) => {
-    const env = fixture(t)
-    const reads = Array.from({ length: 3 }, () => deferred<FileNode[]>())
-    let count = 0
-    t.mock.method(env.api, 'listDir', () => reads[count++].promise)
-    for (const root of ['C:/A', 'C:/B', 'C:/A']) {
-      await env.store.openFolder(root)
-      await env.advance()
-    }
-    reads[2].resolve([file('C:/A/new.md')])
-    await nextTurn()
-    assert.equal(env.store.fileIndex[0].fileName, 'new.md')
-    reads[0].resolve([file('C:/A/old.md')])
-    reads[1].resolve([file('C:/B/old.md')])
-    await nextTurn()
-    assert.equal(env.store.root, 'C:/A')
+    assert.equal(env.store.indexing, true)
+    env.emitChunk({ generation: 2, entries: [entry('C:/B/new.md')], done: true })
     assert.equal(env.store.fileIndex[0].fileName, 'new.md')
     assert.equal(env.store.indexing, false)
   })
 
-  test('同 root 重建后旧 finally 不清除新 indexing', async (t) => {
+  test('同 root 重建后旧 done 不能清除新 indexing', async (t) => {
     const env = fixture(t)
-    const old = deferred<FileNode[]>()
-    const fresh = deferred<FileNode[]>()
-    let count = 0
-    t.mock.method(env.api, 'listDir', () => count++ === 0 ? old.promise : fresh.promise)
     await env.store.openFolder('C:/A')
-    await env.advance()
-    const rebuilding = env.store.rebuildFileIndex()
-    await env.advance()
-    old.resolve([file('C:/A/old.md')])
-    await nextTurn()
+    await env.store.rebuildFileIndex()
+    assert.equal(env.api.cancelIndexWorkspace.mock.callCount(), 1)
+    env.emitChunk({ generation: 1, entries: [entry('C:/A/old.md')], done: true })
     assert.equal(env.store.indexing, true)
     assert.deepEqual(env.store.fileIndex, [])
-    fresh.resolve([file('C:/A/fresh.md')])
-    await rebuilding
+    env.emitChunk({ generation: 2, entries: [entry('C:/A/fresh.md')], done: true })
     assert.equal(env.store.indexing, false)
     assert.equal(env.store.fileIndex[0].fileName, 'fresh.md')
   })
 
-  test('关闭立即清工作区、取消防抖，保留文件标签和未保存草稿', async (t) => {
+  test('索引启动失败时收尾，indexing 不悬挂', async (t) => {
+    const env = fixture(t)
+    t.mock.method(env.api, 'indexWorkspace', async () => { throw new Error('扫描启动失败') })
+    await env.store.openFolder('C:/A')
+    await nextTurn()
+    assert.equal(env.store.indexing, false)
+    assert.deepEqual(env.store.fileIndex, [])
+  })
+
+  test('关闭立即清工作区、取消索引与防抖，保留文件标签和未保存草稿', async (t) => {
     const env = fixture(t)
     const tabs = useTabsStore(env.pinia)
     await tabs.openPath('C:/A/open.md')
@@ -170,8 +154,7 @@ describe('工作区生命周期与后台索引', { concurrency: false, timeout: 
     tabs.updateTabContent(draft.id, '不能丢失的修改')
     const before = tabs.sessionSnapshot()
     await env.store.openFolder('C:/A')
-    await env.advance()
-    env.store.fileIndex = [{ path: 'C:/A/open.md', fileName: 'open.md', relPath: 'open.md' }]
+    env.store.fileIndex = [entry('C:/A/open.md')]
     env.store.scheduleTreeRefresh()
     const stopping = deferred<boolean>()
     t.mock.method(env.api, 'unwatchWorkspace', () => stopping.promise)
@@ -183,33 +166,29 @@ describe('工作区生命周期与后台索引', { concurrency: false, timeout: 
     assert.deepEqual(env.store.fileIndex, [])
     assert.equal(env.settings.lastWorkspace, null)
     const version = env.store.treeVersion
-    const reads = env.api.listDir.mock.callCount()
+    const starts = env.api.indexWorkspace.mock.callCount()
     await env.advance(1000)
     assert.equal(env.store.treeVersion, version)
-    assert.equal(env.api.listDir.mock.callCount(), reads)
+    assert.equal(env.api.indexWorkspace.mock.callCount(), starts)
     assert.deepEqual(tabs.sessionSnapshot(), before)
     stopping.resolve(true)
     await closing
     assert.equal(env.saved.at(-1)!.lastWorkspace, null)
   })
 
-  test('关闭取消批次 yield；未返回的旧目录请求不能复活索引', async (t) => {
+  test('关闭后迟到的索引分块不能复活状态', async (t) => {
     const env = fixture(t)
-    const read = deferred<FileNode[]>()
-    t.mock.method(env.api, 'listDir', () => read.promise)
     await env.store.openFolder('C:/A')
-    await env.advance()
     await env.store.closeFolder()
-    read.resolve([file('C:/A/late.md'), file('C:/A/late', true)])
+    env.emitChunk({ generation: 1, entries: [entry('C:/A/late.md')], done: true })
     await env.advance(1000)
     assert.deepEqual(env.store.fileIndex, [])
     assert.equal(env.store.indexing, false)
-    assert.equal(env.api.listDir.mock.callCount(), 1)
     await env.store.openFolder('C:/B')
-    const reads = env.api.listDir.mock.callCount()
+    const starts = env.api.indexWorkspace.mock.callCount()
     await env.store.closeFolder()
     await env.advance(1000)
-    assert.equal(env.api.listDir.mock.callCount(), reads)
+    assert.equal(env.api.indexWorkspace.mock.callCount(), starts)
   })
 
   test('watch 和 unwatch 迟到成功或失败不能覆盖新 root 或报告过期错误', async (t) => {
@@ -251,34 +230,34 @@ describe('工作区生命周期与后台索引', { concurrency: false, timeout: 
   test('目录事件对 treeVersion 和索引使用同一个 400ms 防抖窗口', async (t) => {
     const env = fixture(t)
     await env.store.openFolder('C:/A')
-    await env.advance()
     const version = env.store.treeVersion
-    const reads = env.api.listDir.mock.callCount()
+    const starts = env.api.indexWorkspace.mock.callCount()
     for (let i = 0; i < 20; i++) env.store.scheduleTreeRefresh()
     await env.advance(300)
     env.store.scheduleTreeRefresh()
     await env.advance(399)
     assert.equal(env.store.treeVersion, version)
-    assert.equal(env.api.listDir.mock.callCount(), reads)
+    assert.equal(env.api.indexWorkspace.mock.callCount(), starts)
     await env.advance(1)
     assert.equal(env.store.treeVersion, version + 1)
     await env.advance()
-    assert.equal(env.api.listDir.mock.callCount(), reads + 1)
+    assert.equal(env.api.indexWorkspace.mock.callCount(), starts + 1)
   })
 
-  test('读取失败收尾且释放配额；dispose 取消残留定时器', async (t) => {
+  test('dispose 取消进行中的索引与残留防抖定时器', async (t) => {
     const env = fixture(t)
-    t.mock.method(env.api, 'listDir', async () => { throw new Error('目录不可读') })
     await env.store.openFolder('C:/A')
-    await env.advance()
-    assert.equal(env.store.indexing, false)
-    assert.deepEqual(env.store.fileIndex, [])
+    // 先挂上防抖定时器（同时取消进行中的索引），dispose 必须把它一并清掉。
     env.store.scheduleTreeRefresh()
+    assert.equal(env.api.cancelIndexWorkspace.mock.callCount(), 1)
     const version = env.store.treeVersion
-    const count = env.api.listDir.mock.callCount()
+    const count = env.api.indexWorkspace.mock.callCount()
     env.store.$dispose()
     await env.advance(1000)
     assert.equal(env.store.treeVersion, version)
-    assert.equal(env.api.listDir.mock.callCount(), count)
+    assert.equal(env.api.indexWorkspace.mock.callCount(), count)
+    env.emitChunk({ generation: 1, entries: [entry('C:/A/late.md')], done: true })
+    assert.deepEqual(env.store.fileIndex, [])
+    assert.equal(env.store.indexing, false)
   })
 })

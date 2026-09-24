@@ -4,11 +4,11 @@ import { describe, test } from 'node:test'
 import type { TestContext } from 'node:test'
 import { setImmediate as nextTurn } from 'node:timers/promises'
 import { createPinia, disposePinia, setActivePinia } from 'pinia'
-import type { KmdeApi } from '../../../preload'
+import type { KmdeApi } from '../../../../preload'
 import type { EditorMode, EditorSelectionState, EditorSession, ReadFileResult, SessionSaveOptions, SessionSaveResult, SessionTab } from '@shared/types'
 import { MAX_WYSIWYG_FILE_SIZE } from '@shared/types'
-import { i18n } from '../i18n'
-import { useTabsStore } from './tabs.store'
+import { i18n } from '../../i18n'
+import { useTabsStore } from '../tabs.store'
 
 type SessionApi = Pick<KmdeApi, 'loadSession' | 'saveSession' | 'readFile' | 'writeFile' | 'saveAsDialog'>
 const windowsKey = (path: string): string => path.replace(/\\/g, '/').toLowerCase()

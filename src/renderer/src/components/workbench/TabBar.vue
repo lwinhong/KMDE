@@ -5,8 +5,7 @@ import { NDropdown } from 'naive-ui'
 import type { DropdownOption } from 'naive-ui'
 import { useTabsStore, type EditorTab } from '../../stores/tabs.store'
 import { useWorkspaceStore } from '../../stores/workspace.store'
-import { MarkdownIcon } from '../editor/tiptap/icons'
-import { IconChevronLeft, IconChevronRight, IconClose, IconPlus } from '@/components/icons'
+import { IconChevronLeft, IconChevronRight, IconClose, IconMarkdown, IconPlus } from '@/components/icons'
 
 const emit = defineEmits<{
   (e: 'new-file'): void
@@ -152,7 +151,7 @@ function onCtxSelect(key: string | number): void {
         @auxclick="onAuxClick($event, tab.id)"
         @contextmenu="onTabContextMenu($event, tab)"
       >
-        <span class="tabbar-tab-icon"><MarkdownIcon :size="14" /></span>
+        <span class="tabbar-tab-icon"><IconMarkdown :size="14" /></span>
         <span class="tabbar-tab-label">
           {{ tab.fileName }}
           <span v-if="tab.deleted" class="tabbar-tab-deleted">{{ $t('tabbar.deleted') }}</span>

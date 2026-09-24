@@ -1,22 +1,35 @@
 import { computed, onScopeDispose, shallowRef } from 'vue'
 import { defineStore } from 'pinia'
-import { SUPPORTED_DOCUMENT_EXTENSIONS, type FileNode } from '@shared/types'
+import { SUPPORTED_DOCUMENT_EXTENSIONS, type FileNode, type QuickOpenEntry, type WorkspaceIndexChunk } from '@shared/types'
 import { useSettingsStore } from './settings.store'
-import { basename, relativeTo } from './pathUtils'
+import { basename } from './pathUtils'
 
-const INDEX_CONCURRENCY = 4
-const INDEX_BATCH_SIZE = 200
-const MAX_INDEX_DIRS = 20000
+export type { QuickOpenEntry }
 
-export interface QuickOpenEntry {
-  path: string
-  fileName: string
-  relPath: string
+// 由完整索引推导"递归包含至少一个支持文档"的目录集合（绝对路径、正斜杠），
+// 文件树用它隐藏过滤后的空目录；relPath 与根路径分隔符差异在此归一。
+export function collectNonEmptyDirs(root: string, fileIndex: QuickOpenEntry[]): Set<string> {
+  const prefix = root.replace(/\\/g, '/').replace(/\/$/, '')
+  const dirs = new Set<string>()
+  for (const item of fileIndex) {
+    let slash = item.relPath.lastIndexOf('/')
+    if (slash < 0) continue
+    let dir = item.relPath.slice(0, slash)
+    for (;;) {
+      dirs.add(`${prefix}/${dir}`)
+      const cut = dir.lastIndexOf('/')
+      if (cut < 0) break
+      dir = dir.slice(0, cut)
+    }
+  }
+  return dirs
 }
 
 interface IndexRun {
   cancelled: boolean
-  pauses: Map<ReturnType<typeof setTimeout>, () => void>
+  generation: number | null
+  entries: QuickOpenEntry[]
+  unsubscribe: () => void
 }
 
 export const useWorkspaceStore = defineStore('workspace', () => {
@@ -30,64 +43,22 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   let operation = 0
   let indexRun: IndexRun | null = null
   let refreshTimer: ReturnType<typeof setTimeout> | null = null
-  let activeReads = 0
-  const readWaiters = new Set<() => void>()
-
-  function wakeReaders(): void {
-    const waiting = [...readWaiters]
-    readWaiters.clear()
-    for (const resume of waiting) resume()
-  }
 
   function cancelIndex(): void {
-    if (indexRun) {
-      indexRun.cancelled = true
-      for (const [timer, resume] of indexRun.pauses) {
-        clearTimeout(timer)
-        resume()
-      }
-      indexRun.pauses.clear()
+    const run = indexRun
+    if (run) {
+      run.cancelled = true
+      run.unsubscribe()
       indexRun = null
+      // 遍历在主进程执行；显式通知取消（打开新目录时主进程也会自动作废旧任务）。
+      void window.kmde.cancelIndexWorkspace()
     }
-    wakeReaders()
     indexing.value = false
   }
 
   function cancelRefresh(): void {
     if (refreshTimer !== null) clearTimeout(refreshTimer)
     refreshTimer = null
-  }
-
-  function current(run: IndexRun): boolean {
-    return indexRun === run && !run.cancelled
-  }
-
-  function yieldToUI(run: IndexRun): Promise<void> {
-    if (!current(run)) return Promise.resolve()
-    return new Promise((resolve) => {
-      const timer = setTimeout(() => {
-        run.pauses.delete(timer)
-        resolve()
-      }, 0)
-      run.pauses.set(timer, resolve)
-    })
-  }
-
-  async function readIndexDir(run: IndexRun, path: string): Promise<FileNode[]> {
-    // 旧 IPC 无法撤回；跨重建共用配额，避免快速切换不断增加在途请求。
-    while (current(run) && activeReads >= INDEX_CONCURRENCY) {
-      await new Promise<void>((resolve) => readWaiters.add(resolve))
-    }
-    if (!current(run)) return []
-    activeReads++
-    try {
-      return await window.kmde.listDir(path)
-    } catch {
-      return []
-    } finally {
-      activeReads--
-      wakeReaders()
-    }
   }
 
   function isMdFile(node: FileNode): boolean {
@@ -99,48 +70,29 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     cancelIndex()
     const scanRoot = root.value
     if (!scanRoot) return
-    const run: IndexRun = { cancelled: false, pauses: new Map() }
+    const run: IndexRun = { cancelled: false, generation: null, entries: [], unsubscribe: () => {} }
     indexRun = run
     indexing.value = true
+    // 先订阅再发起扫描，避免主进程秒回时丢失最早的分块。
+    // invoke 的应答先于任何分块到达（主进程 start 同步返回后才异步遍历），
+    // generation 尚未就绪时分块照收；就绪后用它丢弃迟到/串代的旧分块。
+    run.unsubscribe = window.kmde.onIndexChunk((chunk: WorkspaceIndexChunk) => {
+      if (indexRun !== run || run.cancelled) return
+      if (run.generation !== null && chunk.generation !== run.generation) return
+      for (const entry of chunk.entries) run.entries.push(entry)
+      if (!chunk.done) return
+      indexRun = null
+      indexing.value = false
+      run.unsubscribe()
+      fileIndex.value = run.entries
+    })
     try {
-      // 首轮也让出主线程，让根目录和编辑器先完成本轮更新。
-      await yieldToUI(run)
-      if (!current(run)) return
-      const entries: QuickOpenEntry[] = []
-      const queue = [scanRoot]
-      const seen = new Set(queue)
-      let cursor = 0
-      let processed = 0
-      while (current(run) && cursor < queue.length && cursor < MAX_INDEX_DIRS) {
-        const end = Math.min(cursor + INDEX_CONCURRENCY, queue.length, MAX_INDEX_DIRS)
-        const batch = queue.slice(cursor, end)
-        cursor = end
-        const results = await Promise.all(batch.map((path) => readIndexDir(run, path)))
-        if (!current(run)) return
-        for (const nodes of results) {
-          for (const node of nodes) {
-            if (node.isDir) {
-              if (!seen.has(node.path) && queue.length < MAX_INDEX_DIRS) {
-                seen.add(node.path)
-                queue.push(node.path)
-              }
-            } else if (isMdFile(node)) {
-              entries.push({ path: node.path, fileName: node.name, relPath: relativeTo(node.path, scanRoot) })
-            }
-            if (++processed % INDEX_BATCH_SIZE === 0) {
-              await yieldToUI(run)
-              if (!current(run)) return
-            }
-          }
-        }
-        // 即使 IPC 立即 resolve，也不能用连续微任务垄断渲染线程。
-        if (cursor < queue.length) await yieldToUI(run)
-      }
-      if (current(run)) fileIndex.value = entries
-    } finally {
-      if (current(run)) {
+      run.generation = await window.kmde.indexWorkspace(scanRoot)
+    } catch {
+      if (indexRun === run) {
         indexRun = null
         indexing.value = false
+        run.unsubscribe()
       }
     }
   }

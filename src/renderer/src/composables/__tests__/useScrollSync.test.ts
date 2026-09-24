@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { createScrollSync } from './useScrollSync'
+import { createScrollSync } from '../useScrollSync'
 
 type FakeScroller = EventTarget & { scrollTop: number; scrollHeight: number; clientHeight: number }
 

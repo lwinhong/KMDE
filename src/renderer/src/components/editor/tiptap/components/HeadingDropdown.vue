@@ -3,8 +3,8 @@
     <ToolbarDropdown>
       <template #trigger="{ toggle }">
         <ToolbarButton :is-active="isActive" :title="$t('editor.heading')" dropdown @click="toggle">
-          <HeadingIcon size="16" />
-          <ChevronDownIcon class="dropdown-arrow" />
+          <IconHeading size="16" />
+          <IconChevronDownSolid class="dropdown-arrow" />
         </ToolbarButton>
       </template>
       <template #default="{ close }">
@@ -32,7 +32,7 @@
 <script setup>
 import { computed } from 'vue'
 import { ToolbarButton, ToolbarGroup, ToolbarDropdown } from './primitives'
-import { HeadingIcon, ChevronDownIcon } from '../icons'
+import { IconHeading, IconChevronDownSolid } from '@/components/icons'
 
 const props = defineProps({ editor: Object })
 

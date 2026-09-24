@@ -5,9 +5,9 @@ import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { test, type TestContext } from 'node:test'
 import chokidar, { type ChokidarOptions, type FSWatcher } from 'chokidar'
-import { WatcherManager } from './watcher.ts'
-import { IGNORED_DIR_NAMES } from '../shared/types.ts'
-import type { FsEvent } from '../shared/types'
+import { WatcherManager } from '../watcher.ts'
+import { IGNORED_DIR_NAMES } from '../../shared/types.ts'
+import type { FsEvent } from '../../shared/types.ts'
 
 class FakeWatcher extends EventEmitter {
   added: string[][] = []

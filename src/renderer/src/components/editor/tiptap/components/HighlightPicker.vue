@@ -1,13 +1,13 @@
 <template>
   <ToolbarButton :is-active="editor?.isActive('highlight')" :title="$t('editor.highlight')"
     @click="editor?.chain().focus().toggleHighlight().run()">
-    <HighlighterIcon :size="size" />
+    <IconHighlighter :size="size" />
   </ToolbarButton>
 </template>
 
 <script setup>
 import { ToolbarButton } from './primitives'
-import { HighlighterIcon } from '../icons'
+import { IconHighlighter } from '@/components/icons'
 
 defineProps({
   editor: Object, size: {

@@ -2,7 +2,7 @@
   <ToolbarDropdown align-right>
     <template #trigger="{ toggle }">
       <ToolbarButton :title="$t('editor.insertImage')" @click="toggle">
-        <ImagePlusIcon />
+        <IconImagePlus />
       </ToolbarButton>
     </template>
     <template #default="{ close }">
@@ -57,7 +57,7 @@
 <script setup>
 import { ref } from 'vue'
 import { ToolbarButton, ToolbarDropdown } from './primitives'
-import { ImagePlusIcon } from '../icons'
+import { IconImagePlus } from '@/components/icons'
 
 const props = defineProps({
   editor: Object,

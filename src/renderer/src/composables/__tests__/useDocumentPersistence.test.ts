@@ -5,11 +5,11 @@ import type { TestContext } from 'node:test'
 import { setImmediate as nextTurn } from 'node:timers/promises'
 import { createPinia, disposePinia, setActivePinia } from 'pinia'
 import { createRenderer, h, nextTick, onMounted, onUnmounted } from 'vue'
-import type { KmdeApi } from '../../../preload'
+import type { KmdeApi } from '../../../../preload'
 import type { EditorSession, ReadFileResult, SessionSaveOptions, SessionSaveResult, SessionTab } from '@shared/types'
-import { i18n } from '../i18n'
-import { useTabsStore } from '../stores/tabs.store'
-import { useDocumentPersistence } from './useDocumentPersistence'
+import { i18n } from '../../i18n'
+import { useTabsStore } from '../../stores/tabs.store'
+import { useDocumentPersistence } from '../useDocumentPersistence'
 
 type SessionApi = Pick<KmdeApi, 'loadSession' | 'saveSession' | 'readFile' | 'writeFile' | 'saveAsDialog'>
 type HostNode = { parent: HostNode | null; children: HostNode[]; text: string }

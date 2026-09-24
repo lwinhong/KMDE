@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { computeTextDiff } from './textDiff'
+import { computeTextDiff } from '../textDiff'
 
 test('相同内容返回 null', () => {
   assert.equal(computeTextDiff('# hello', '# hello'), null)

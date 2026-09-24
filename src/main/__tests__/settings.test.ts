@@ -4,8 +4,8 @@ import { promises as fs } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, dirname, join } from 'node:path'
 import { after, mock, test, type TestContext } from 'node:test'
-import { DEFAULT_SETTINGS } from '../shared/types.ts'
-import type { AppSettings } from '../shared/types'
+import { DEFAULT_SETTINGS } from '../../shared/types.ts'
+import type { AppSettings } from '../../shared/types.ts'
 
 let systemLocale = 'en-US'
 const electron = mock.module('electron', {
@@ -23,7 +23,7 @@ async function fixture(t: TestContext) {
   const previous = process.env['APPDATA']
   process.env['APPDATA'] = base
   systemLocale = 'en-US'
-  const settings: typeof import('./settings.ts') = await import(`./settings.ts?test=${randomUUID()}`)
+  const settings: typeof import('../settings.ts') = await import(`../settings.ts?test=${randomUUID()}`)
   t.after(async () => {
     if (previous === undefined) delete process.env['APPDATA']
     else process.env['APPDATA'] = previous

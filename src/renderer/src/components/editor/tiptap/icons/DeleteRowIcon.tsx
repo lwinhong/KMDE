@@ -1,9 +1,0 @@
-import type { IconProps } from './types'
-
-export default function DeleteRowIcon({ size = 18, className, ...props }: IconProps) {
-  return (
-    <svg width={size} height={size} className={className} viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" {...props}>
-      <path d="M889.6 477.44l60.586667 60.586667-90.709334 90.624 90.581334 90.538666-60.373334 60.330667-90.538666-90.496-90.453334 90.453333-60.16-60.586666 90.154667-90.325334-90.325333-90.368 60.330666-60.373333 90.325334 90.368 90.581333-90.752zM329.813333 671.146667v85.333333h-256v-85.333333h256z m256-213.333334v85.333334h-512v-85.333334h512z m256-213.333333v85.333333h-768v-85.333333h768z" fill="currentColor" />
-    </svg>
-  )
-}

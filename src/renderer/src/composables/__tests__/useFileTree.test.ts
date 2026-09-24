@@ -5,7 +5,7 @@ import { setImmediate as nextTurn } from 'node:timers/promises'
 import { createRenderer, h, inject, isProxy, nextTick, provide, shallowRef } from 'vue'
 import type { FileNode } from '@shared/types'
 import type { TreeController } from '../components/sidebar/FileTreeNode.vue'
-import { useFileTree } from './useFileTree'
+import { useFileTree } from '../useFileTree.ts'
 
 type HostNode = { parent: HostNode | null; children: HostNode[]; text: string }
 const hostNode = (text = ''): HostNode => ({ parent: null, children: [], text })
@@ -52,6 +52,7 @@ function fixture(t: TestContext, initialRoot: string | null = null) {
   t.mock.timers.enable({ apis: ['setTimeout'] })
   const root = shallowRef(initialRoot)
   const version = shallowRef(0)
+  const dirs = shallowRef<Set<string> | null>(null)
   const onError = t.mock.fn((_error: unknown, _path: string) => {})
   const api = { listDir: t.mock.fn(async (_path: string): Promise<FileNode[]> => []) }
   const originalWindow = Object.getOwnPropertyDescriptor(globalThis, 'window')
@@ -66,7 +67,7 @@ function fixture(t: TestContext, initialRoot: string | null = null) {
   }
   const app = renderer.createApp({
     setup() {
-      tree = useFileTree(() => root.value, () => version.value, onError)
+      tree = useFileTree(() => root.value, () => version.value, onError, () => dirs.value)
       provide('fileTreeController', tree.controller)
       return () => h(child)
     }
@@ -84,7 +85,7 @@ function fixture(t: TestContext, initialRoot: string | null = null) {
     else Reflect.deleteProperty(globalThis, 'window')
   })
   return {
-    tree, root, version, api, onError, injected, host, unmount,
+    tree, root, version, dirs, api, onError, injected, host, unmount,
     async flush() { await nextTick(); await nextTurn(); await nextTick() },
     async advance(ms = 0) {
       await nextTick()
@@ -294,6 +295,44 @@ describe('目录缓存、分页与失效保护', { concurrency: false, timeout: 
     reads[4].resolve([])
     await refreshing
     assert.equal(env.injected.childrenCache.size, 5)
+  })
+
+  test('索引未就绪显示全部目录，就绪后隐藏空目录，文件与分页不受影响', async (t) => {
+    const env = fixture(t)
+    const emptyDir = file('C:/A/empty', true)
+    const fullDir = file('C:/A/full', true)
+    const nested = file('C:/A/empty/nested', true)
+    const doc = file('C:/A/readme.md')
+    const fullChildren = [
+      ...Array.from({ length: 250 }, (_, i) => file(`C:/A/full/f${i}.md`)),
+      ...Array.from({ length: 250 }, (_, i) => file(`C:/A/full/hole${i}`, true))
+    ]
+    t.mock.method(env.api, 'listDir', async (path: string) =>
+      path === 'C:/A' ? [emptyDir, fullDir, doc]
+        : path === 'C:/A/empty' ? [nested]
+        : fullChildren)
+    env.root.value = 'C:/A'
+    await env.flush()
+    // 索引未就绪（null）：空目录照常显示，可正常展开。
+    assert.deepEqual(env.tree.rootChildren.value.map((node) => node.name), ['empty', 'full', 'readme.md'])
+    await env.injected.toggleNode(emptyDir)
+    assert.equal(env.injected.childrenCache.get(emptyDir.path)![0].name, 'nested')
+    await env.injected.toggleNode(fullDir)
+    assert.equal(env.injected.childrenCache.get(fullDir.path)!.length, 200)
+    // 索引完成：只有 full 被标记，空目录从根与已加载缓存中消失。
+    env.dirs.value = new Set(['C:/A/full'])
+    await nextTick()
+    assert.deepEqual(env.tree.rootChildren.value.map((node) => node.name), ['full', 'readme.md'])
+    assert.deepEqual(env.injected.childrenCache.get(emptyDir.path)!, [])
+    // 过滤后分页按可见数量计算：250 个文件第一页 200，剩余 50；空目录不占页。
+    assert.equal(env.injected.childrenCache.get(fullDir.path)!.length, 200)
+    assert.ok(env.injected.childrenCache.get(fullDir.path)!.every((node) => !node.isDir))
+    assert.deepEqual(env.tree.moreDirectories.value, [{ path: fullDir.path, remaining: 50 }])
+    // 索引重新变为未就绪（null）时恢复显示。
+    env.dirs.value = null
+    await nextTick()
+    assert.deepEqual(env.tree.rootChildren.value.map((node) => node.name), ['empty', 'full', 'readme.md'])
+    assert.equal(env.injected.childrenCache.get(emptyDir.path)![0].name, 'nested')
   })
 
   test('关闭根及卸载立即清状态，迟到子目录与后续 getter 更新都不回填', async (t) => {

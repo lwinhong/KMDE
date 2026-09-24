@@ -5,8 +5,8 @@ import { tmpdir } from 'node:os'
 import { basename, dirname, join, sep } from 'node:path'
 import { test } from 'node:test'
 import type { TestContext } from 'node:test'
-import { SessionStorage } from './session.ts'
-import type { EditorSession, SessionSaveOptions, SessionTab } from '../shared/types'
+import { SessionStorage } from '../session.ts'
+import type { EditorSession, SessionSaveOptions, SessionTab } from '../../shared/types.ts'
 
 function makeTab(overrides: Partial<SessionTab> = {}): SessionTab {
   return {

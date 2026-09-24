@@ -3,6 +3,7 @@ import { promises as fs, createReadStream, existsSync, statSync } from 'fs'
 import { join, extname, isAbsolute, resolve, dirname } from 'path'
 import type { AppSettings, EditorSession, SessionSaveOptions, SessionSaveResult } from '../../shared/types'
 import { listWorkspaceDir } from '../workspaceFiles'
+import { WorkspaceIndexer } from '../workspaceIndex'
 import { WatcherManager } from '../watcher'
 import { t } from '../i18n'
 import { readSettings, writeSettings } from '../settings'
@@ -18,6 +19,8 @@ export function sendToRenderer(channel: string, ...args: unknown[]): void {
 const watcherManager = new WatcherManager((event) => {
   sendToRenderer('fs:event', event)
 })
+
+const workspaceIndexer = new WorkspaceIndexer()
 
 function validatePath(p: unknown): string {
   if (typeof p !== 'string' || p.length === 0 || p.includes('\0')) {
@@ -119,6 +122,19 @@ function registerFsIpc(): void {
 
   ipcMain.handle('fs:watch', (_e, root: string) => {
     watcherManager.watch(validatePath(root))
+    return true
+  })
+
+  // 索引遍历全部在主进程完成，渲染进程只接收分块结果（消除索引期间 UI 卡顿）。
+  // 返回本次扫描代次，渲染端用它丢弃迟到分块。
+  ipcMain.handle('fs:index', (_e, root: string): number => {
+    return workspaceIndexer.start(validatePath(root), (chunk) => {
+      sendToRenderer('fs:index-chunk', chunk)
+    })
+  })
+
+  ipcMain.handle('fs:index-cancel', () => {
+    workspaceIndexer.cancel()
     return true
   })
 

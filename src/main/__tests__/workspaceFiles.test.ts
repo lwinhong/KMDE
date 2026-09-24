@@ -2,8 +2,8 @@ import assert from 'node:assert/strict'
 import { promises as fs, type Dirent } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { test } from 'node:test'
-import { IGNORED_DIR_NAMES } from '../shared/types.ts'
-import { isIgnoredWorkspaceName, listWorkspaceDir } from './workspaceFiles.ts'
+import { IGNORED_DIR_NAMES } from '../../shared/types.ts'
+import { isIgnoredWorkspaceName, listWorkspaceDir } from '../workspaceFiles.ts'
 
 function entry(name: string, kind: 'file' | 'dir' | 'link' | 'other' = 'file'): Dirent {
   return {

@@ -4,7 +4,7 @@ import { NDropdown, NModal, NInput, NButton, useMessage } from 'naive-ui'
 import type { DropdownOption } from 'naive-ui'
 import { useI18n } from 'vue-i18n'
 import type { FileNode } from '@shared/types'
-import { useWorkspaceStore } from '../../stores/workspace.store'
+import { useWorkspaceStore, collectNonEmptyDirs } from '../../stores/workspace.store'
 import { useSettingsStore } from '../../stores/settings.store'
 import { dirname, joinPath, relativeTo } from '../../stores/pathUtils'
 import { useFileTree } from '../../composables/useFileTree'
@@ -21,12 +21,20 @@ const settings = useSettingsStore()
 const message = useMessage()
 const { t } = useI18n()
 
+// 首次索引尚无结果时不过滤（null）；重建索引期间沿用上一次结果，避免空目录闪烁。
+const nonEmptyDirs = computed<Set<string> | null>(() => {
+  const root = workspace.root
+  if (!root) return null
+  if (workspace.indexing && workspace.fileIndex.length === 0) return null
+  return collectNonEmptyDirs(root, workspace.fileIndex)
+})
+
 const {
   rootChildren, visibleRootChildren, rootLoading, hasMoreRoot, moreDirectories,
   controller, refreshRoot, loadMore
 } = useFileTree(() => workspace.root, () => workspace.treeVersion, (err) => {
   message.error(t('sidebar.readDirFailed', { msg: err instanceof Error ? err.message : String(err) }))
-})
+}, nonEmptyDirs)
 provide('fileTreeController', controller)
 
 const moreDirectoryLabels = computed(() => moreDirectories.value.map((directory) => ({

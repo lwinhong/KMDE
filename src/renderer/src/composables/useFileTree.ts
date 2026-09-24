@@ -9,8 +9,11 @@ const REFRESH_CONCURRENCY = 4
 export function useFileTree(
   root: MaybeRefOrGetter<string | null>,
   treeVersion: MaybeRefOrGetter<number>,
-  onError: (error: unknown, path: string) => void
+  onError: (error: unknown, path: string) => void,
+  // 递归含支持文档的目录集合（绝对路径、正斜杠）；null 表示索引未就绪，不过滤。
+  visibleDirs: MaybeRefOrGetter<Set<string> | null> = () => null
 ) {
+  const rawRootChildren = shallowRef<FileNode[]>([])
   const rootChildren = shallowRef<FileNode[]>([])
   const rootLoading = shallowRef(false)
   const rootLimit = shallowRef(PAGE_SIZE)
@@ -18,6 +21,7 @@ export function useFileTree(
   const loadingDirs = shallowReactive(new Set<string>())
   // 节点契约保持不变；只把当前页暴露给递归组件，完整结果不做深层代理。
   const childrenCache = shallowReactive(new Map<string, FileNode[]>())
+  const rawAllChildren = new Map<string, FileNode[]>()
   const allChildren = shallowReactive(new Map<string, FileNode[]>())
   const limits = new Map<string, number>()
   const requests = new Map<string, { promise: Promise<void> }>()
@@ -46,6 +50,7 @@ export function useFileTree(
     requests.clear()
     loadingDirs.clear()
     childrenCache.clear()
+    rawAllChildren.clear()
     allChildren.clear()
     rootLoading.value = false
     for (const [timer, resume] of pauses) {
@@ -54,6 +59,7 @@ export function useFileTree(
     }
     pauses.clear()
     if (resetRoot) {
+      rawRootChildren.value = []
       rootChildren.value = []
       rootLimit.value = PAGE_SIZE
       expandedDirs.clear()
@@ -77,6 +83,20 @@ export function useFileTree(
     if (nodes) childrenCache.set(path, nodes.slice(0, limits.get(path) ?? PAGE_SIZE))
   }
 
+  // 索引过滤后递归不含任何支持文档的空目录不显示；文件与"索引未就绪"状态不受影响。
+  function dirVisible(node: FileNode): boolean {
+    const dirs = toValue(visibleDirs)
+    return !node.isDir || dirs === null || dirs.has(node.path.replace(/\\/g, '/'))
+  }
+
+  function applyFilter(): void {
+    rootChildren.value = rawRootChildren.value.filter(dirVisible)
+    for (const [path, nodes] of rawAllChildren) {
+      allChildren.set(path, nodes.filter(dirVisible))
+      publishChildren(path)
+    }
+  }
+
   function loadDirectory(path: string, id: number, isRoot = false): Promise<void> {
     if (!current(id)) return Promise.resolve()
     const pending = requests.get(path)
@@ -89,15 +109,20 @@ export function useFileTree(
       try {
         const nodes = await window.kmde.listDir(path)
         if (!current(id)) return
-        if (isRoot) rootChildren.value = nodes
-        else {
-          allChildren.set(path, nodes)
+        if (isRoot) {
+          rawRootChildren.value = nodes
+          rootChildren.value = nodes.filter(dirVisible)
+        } else {
+          rawAllChildren.set(path, nodes)
+          allChildren.set(path, nodes.filter(dirVisible))
           publishChildren(path)
         }
       } catch (error) {
         if (!current(id)) return
-        if (isRoot) rootChildren.value = []
-        else expandedDirs.delete(path)
+        if (isRoot) {
+          rawRootChildren.value = []
+          rootChildren.value = []
+        } else expandedDirs.delete(path)
         onError(error, path)
       } finally {
         // 不能由旧请求删除新请求的 loading，尤其是 A-B-A 与同根刷新。
@@ -116,6 +141,7 @@ export function useFileTree(
     invalidate(false)
     const scanRoot = toValue(root)
     if (!scanRoot) {
+      rawRootChildren.value = []
       rootChildren.value = []
       return
     }
@@ -163,6 +189,8 @@ export function useFileTree(
     revision.value++
   }, { flush: 'sync' })
   watch(revision, () => { void refreshRoot() }, { immediate: true })
+  // 索引完成或更新后重新过滤已加载的目录，空目录随之隐藏或恢复。
+  watch(() => toValue(visibleDirs), applyFilter)
 
   onScopeDispose(() => {
     disposed = true

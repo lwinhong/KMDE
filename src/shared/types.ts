@@ -121,3 +121,17 @@ export const MAX_WYSIWYG_FILE_SIZE = 2 * 1024 * 1024
 export const SUPPORTED_DOCUMENT_EXTENSIONS: ReadonlySet<string> = new Set(['.md', '.markdown', '.mdown', '.txt'])
 
 export const IGNORED_DIR_NAMES = new Set(['node_modules', '.git', 'dist', 'out', '.hvigor'])
+
+/** 快速打开索引条目（主进程构建，渲染进程只读） */
+export interface QuickOpenEntry {
+  path: string
+  fileName: string
+  relPath: string
+}
+
+/** 工作区索引分块：主进程流式推送，done=true 表示本次扫描结束 */
+export interface WorkspaceIndexChunk {
+  generation: number
+  entries: QuickOpenEntry[]
+  done: boolean
+}

@@ -10,6 +10,7 @@ import type {
   FsEvent,
   MenuCommand,
   ReadFileResult,
+  WorkspaceIndexChunk,
   WriteFileResult
 } from '../shared/types'
 
@@ -48,6 +49,8 @@ const api = {
   watchWorkspace: (root: string): Promise<boolean> => ipcRenderer.invoke('fs:watch', root),
   unwatchWorkspace: (): Promise<boolean> => ipcRenderer.invoke('fs:unwatch'),
   watchOpenFiles: (paths: string[]): Promise<boolean> => ipcRenderer.invoke('fs:watchFiles', paths),
+  indexWorkspace: (root: string): Promise<number> => ipcRenderer.invoke('fs:index', root),
+  cancelIndexWorkspace: (): Promise<boolean> => ipcRenderer.invoke('fs:index-cancel'),
 
   loadSettings: (): Promise<AppSettings> => ipcRenderer.invoke('settings:load'),
   saveSettings: (settings: AppSettings): Promise<boolean> =>
@@ -65,6 +68,8 @@ const api = {
     ipcRenderer.invoke('export:pdf', html, outPath),
 
   onFsEvent: (callback: (event: FsEvent) => void): (() => void) => subscribe<FsEvent>('fs:event', callback),
+  onIndexChunk: (callback: (chunk: WorkspaceIndexChunk) => void): (() => void) =>
+    subscribe<WorkspaceIndexChunk>('fs:index-chunk', callback),
   onOpenFile: (callback: (path: string) => void): (() => void) => subscribe<string>('app:open-file', callback),
   onMenuCommand: (callback: (command: MenuCommand) => void): (() => void) =>
     subscribe<MenuCommand>('menu:command', callback),

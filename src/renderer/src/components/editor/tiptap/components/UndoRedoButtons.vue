@@ -5,21 +5,21 @@
       :title="$t('editor.undo')"
       @click="editor?.chain().focus().undo().run()"
     >
-      <UndoIcon />
+      <IconUndo />
     </ToolbarButton>
     <ToolbarButton
       :disabled="!editor?.can().redo()"
       :title="$t('editor.redo')"
       @click="editor?.chain().focus().redo().run()"
     >
-      <RedoIcon />
+      <IconRedo />
     </ToolbarButton>
   </ToolbarGroup>
 </template>
 
 <script setup>
 import { ToolbarButton, ToolbarGroup } from './primitives'
-import { UndoIcon, RedoIcon } from '../icons'
+import { IconUndo, IconRedo } from '@/components/icons'
 
 defineProps({ editor: Object })
 </script>
