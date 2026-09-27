@@ -147,6 +147,9 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   if (renderTimer) clearTimeout(renderTimer)
+  // 递增序号使队列中的在途渲染不再回写已卸载实例。
+  renderSeq++
+  if (copyTimer) clearTimeout(copyTimer)
 })
 
 /* ------------------------- zoom ------------------------- */

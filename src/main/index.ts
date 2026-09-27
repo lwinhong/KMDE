@@ -1,9 +1,10 @@
-import { app, BrowserWindow, ipcMain, protocol, shell, session } from 'electron'
+import { app, BrowserWindow, ipcMain, protocol, screen, shell, session } from 'electron'
 import { join, resolve } from 'path'
 import { existsSync, statSync } from 'fs'
 import { registerIpcHandlers } from './ipc'
 import { createAppMenu } from './menu'
 import { readSettings, setCurrentLocale } from './settings'
+import { readWindowStateSync, resolveWindowState, writeWindowStateFileSync } from './windowState'
 import { APP_LOCALES } from '../shared/types'
 import type { AppLocale } from '../shared/types'
 
@@ -62,9 +63,14 @@ function extractMdPathFromArgv(argv: string[], workingDirectory = process.cwd())
 function createWindow(): void {
   readyToClose = false
   rendererIsReady = false
+  // 依据已连接显示器恢复上次窗口状态；屏幕被拔出时由 resolveWindowState 回退主屏。
+  const displays = screen.getAllDisplays().map((display) => display.workArea)
+  const state = resolveWindowState(readWindowStateSync(), displays, screen.getPrimaryDisplay().workArea)
   mainWindow = new BrowserWindow({
-    width: 1280,
-    height: 820,
+    x: state.x,
+    y: state.y,
+    width: state.width,
+    height: state.height,
     minWidth: 900,
     minHeight: 600,
     show: false,
@@ -80,6 +86,7 @@ function createWindow(): void {
       spellcheck: false
     }
   })
+  if (state.isMaximized) mainWindow.maximize()
 
   const win = mainWindow
   win.webContents.on('did-start-loading', () => {
@@ -94,7 +101,18 @@ function createWindow(): void {
 
   // intercept native close (Alt+F4 / taskbar) so the renderer can
   // prompt for unsaved tabs before actually quitting
-  mainWindow.on('close', (event) => {
+  win.on('close', (event) => {
+    // 无论本次关闭是否被拦下，都先持久化窗口状态（最大化标志 + 普通态边界）。
+    if (!win.isDestroyed()) {
+      const bounds = win.getNormalBounds()
+      writeWindowStateFileSync({
+        x: bounds.x,
+        y: bounds.y,
+        width: bounds.width,
+        height: bounds.height,
+        isMaximized: win.isMaximized()
+      })
+    }
     if (readyToClose) return
     if (!mainWindow || mainWindow.isDestroyed()) return
     event.preventDefault()

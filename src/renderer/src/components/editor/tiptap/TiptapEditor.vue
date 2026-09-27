@@ -427,6 +427,7 @@ function doUpdateTableToolbar(): void {
 }
 
 let scrollEl: HTMLElement | null = null
+let disposed = false
 
 function handleContentScroll(): void {
   emit('scroll')
@@ -435,6 +436,7 @@ function handleContentScroll(): void {
 onMounted(() => {
   window.addEventListener('resize', updateTableToolbar)
   nextTick(() => {
+    if (disposed) return
     scrollEl = editorContentRef.value
     wrapperRef.value?.addEventListener('scroll', updateTableToolbar, { passive: true })
     scrollEl?.addEventListener('scroll', updateTableToolbar, { passive: true })
@@ -443,6 +445,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  disposed = true
   flush()
   ready = false
   resolveReady(false)
