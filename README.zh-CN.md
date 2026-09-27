@@ -25,13 +25,14 @@ KMDE 是一款 Notion-like 风格的桌面 Markdown 编辑器，基于 Electron 
 
 ### 工作区
 
-- **文件树侧边栏**：打开文件夹作为工作区，支持新建 / 重命名 / 删除文件与文件夹
+- **文件树侧边栏**：打开文件夹作为工作区，支持新建 / 重命名 / 删除文件与文件夹；目录内容分页懒加载，超大目录不卡 UI
+- **后台工作区索引**：整个工作区在主进程一次性扫描建立索引（广度优先、分块流式推送、可取消），快速打开与文件树共用该索引，不再逐键遍历；索引完成后空目录自动隐藏
 - **多标签页**：脏状态标记、未保存关闭确认
 - **会话恢复**：重启后自动恢复所有打开的标签页（含未保存草稿与未命名文件）；会话快照以原子写入方式保存到 `%APPDATA%/kmde/session/`，未保存内容另有 `drafts/` 草稿备份
 - **自动保存**：脏文件在短暂防抖后自动写入磁盘；冲突或文件被删除时暂停自动保存，待用户处理
 - **外部变更检测**：基于 chokidar 监听工作区，文件被外部修改且本地有未保存内容时弹出冲突对比对话框
 - **大纲面板**：按标题层级展示文档结构，支持跳转
-- **快速打开**：`Ctrl+P` 模糊搜索打开文件；`Ctrl+Shift+P` 命令面板
+- **快速打开**：`Ctrl+P` 基于工作区索引的模糊搜索；`Ctrl+Shift+P` 命令面板
 
 ### 导出
 
@@ -47,6 +48,7 @@ KMDE 是一款 Notion-like 风格的桌面 Markdown 编辑器，基于 Electron 
 - 文件关联：`md` / `markdown` / `mdown`
 - 深色 / 浅色主题（`F11` 切换），跟随 Naive UI 主题系统
 - 设置持久化（主题、语言、字号、默认模式、面板可见性与宽度、上次工作区），存于 `%APPDATA%/kmde/settings.json`
+- **窗口状态记忆**：窗口尺寸、位置与最大化状态在启动时从 `%APPDATA%/kmde/window-state.json` 恢复；若上次所在的显示器已拔出，自动回退主屏
 - 关于对话框（版本信息）
 
 ## 快捷键
@@ -100,13 +102,15 @@ pnpm typecheck:web    # 渲染层
 
 ## 测试
 
-测试基于 Node 内置的 `node:test` 运行器，无需额外测试框架。
+测试基于 Node 内置的 `node:test` 运行器，无需额外测试框架。测试套件位于各模块旁的 `__tests__/` 目录。
 
 ```bash
-# 主进程：会话存储（原子写入、快照校验、符号链接防御）
-node --test src/main/session.test.ts
+# 主进程：工作区索引、文件树操作、会话存储、设置、监听、窗口状态
+# （原子写入、快照校验、符号链接防御等）
+node --experimental-strip-types --experimental-test-module-mocks --test src/main/__tests__/*.test.ts
 
-# 渲染层：tabs store + 文档持久化（内存中 Vite 转译，不产生构建产物）
+# 渲染层：tabs store、workspace store、文件树、文档持久化、文本 diff、滚动同步
+# （内存中 Vite 转译，不产生构建产物）
 node scripts/test-session-renderer.mjs            # 全部套件
 node scripts/test-session-renderer.mjs store      # 仅 tabs store
 node scripts/test-session-renderer.mjs persistence
@@ -133,26 +137,32 @@ pnpm build:win
 ```
 src/
 ├── main/                  # 主进程
-│   ├── index.ts           # 窗口创建、单实例锁、文件关联、协议注册
-│   ├── ipc/               # IPC 处理器（文件系统、对话框、设置、会话、导出）
+│   ├── index.ts           # 窗口创建 + 状态恢复、单实例锁、文件关联、协议注册
+│   ├── ipc/               # IPC 处理器（文件系统、对话框、设置、会话、导出、工作区索引）
 │   ├── session.ts         # 会话存储：快照校验、原子写入、草稿备份
 │   ├── watcher.ts         # chokidar 工作区监听（含自写入标记）
+│   ├── workspaceIndex.ts  # 后台工作区索引器（广度优先、分块流式、可取消）
+│   ├── workspaceFiles.ts  # 文件树目录列举（忽略规则、排序）
+│   ├── windowState.ts     # 窗口状态持久化 + 多屏回退
 │   ├── settings.ts        # 设置读写 + 当前语言
 │   ├── menu.ts            # 应用菜单与快捷键
-│   └── i18n.ts            # 原生菜单 / 对话框翻译
+│   ├── i18n.ts            # 原生菜单 / 对话框翻译
+│   └── __tests__/         # 主进程模块的 node:test 测试套件
 ├── preload/               # contextBridge 暴露 window.kmde API
 ├── shared/                # 主/渲染进程共享的类型、常量与语言包
 └── renderer/
     ├── src/
-    │   ├── stores/        # Pinia：tabs（含测试）、workspace、settings
-    │   ├── composables/   # useDocumentPersistence：自动保存 + 会话快照（含测试）
+    │   ├── stores/        # Pinia：tabs、workspace、settings（含 __tests__）
+    │   ├── composables/   # useDocumentPersistence、useFileTree、useScrollSync（含 __tests__）
+    │   ├── utils/         # fuzzyMatch、textDiff、blockLines（含 __tests__）
     │   ├── i18n/          # vue-i18n 实例
     │   ├── components/
+    │   │   ├── icons/     # 统一 SVG 图标库（分类文件 + barrel 导出）
     │   │   ├── workbench/ # 布局、标题栏、标签栏、状态栏、欢迎页、关于对话框
-    │   │   ├── sidebar/   # 文件树
+    │   │   ├── sidebar/   # 文件树（分页懒加载、空目录隐藏）
     │   │   ├── editor/    # Tiptap 编辑器 + CodeMirror 源码编辑器
     │   │   ├── outline/   # 大纲面板
-    │   │   ├── palette/   # 快速打开 / 命令面板
+    │   │   ├── palette/   # 快速打开 / 命令面板（基于工作区索引）
     │   │   ├── conflict/  # 外部变更冲突对话框
     │   │   └── export/    # 导出对话框
     │   ├── export/        # HTML 导出管线（离线资源内联）

@@ -25,13 +25,14 @@ If you are looking for an open-source, lightweight Notion-like alternative with 
 - Large files automatically fall back to source mode (> 2 MB)
 
 ### Workspace
-- **File tree sidebar**: open a folder as a workspace; create / rename / delete files and folders
+- **File tree sidebar**: open a folder as a workspace; create / rename / delete files and folders; directory children load lazily in pages, so huge folders never freeze the UI
+- **Background workspace index**: the whole workspace is scanned once in the main process (breadth-first, chunk-streamed over IPC, cancellable) and kept for quick open and the file tree — no re-walk per keystroke; empty directories are hidden from the tree
 - **Multi-tab editing**: dirty-state markers, unsaved-close confirmation
 - **Session restore**: open tabs — including unsaved drafts and untitled files — are restored on restart; snapshots are written atomically to `%APPDATA%/kmde/session/` (plus a `drafts/` backup of unsaved content)
 - **Auto-save**: dirty files are saved automatically after a short debounce; conflict or deletion states pause auto-save until resolved
 - **External change detection**: workspace watched with chokidar; when a file is modified externally while you have unsaved edits, a conflict dialog lets you compare and choose
 - **Outline panel**: document headings hierarchy with click-to-jump
-- **Quick open**: `Ctrl+P` fuzzy file search; `Ctrl+Shift+P` command palette
+- **Quick open**: `Ctrl+P` fuzzy file search over the workspace index; `Ctrl+Shift+P` command palette
 
 ### Export
 - **HTML export**: standalone HTML plus a `KMDE-assets/` folder (KaTeX fonts, hljs themes, mermaid) — works completely offline
@@ -45,6 +46,7 @@ If you are looking for an open-source, lightweight Notion-like alternative with 
 - File associations: `md` / `markdown` / `mdown`
 - Dark / light theme (`F11`), built on the Naive UI theming system
 - Persistent settings (theme, language, font size, default mode, panel visibility and widths, last workspace) stored in `%APPDATA%/kmde/settings.json`
+- **Window state memory**: window size, position and maximized state are restored on launch from `%APPDATA%/kmde/window-state.json`; if the saved monitor is no longer attached, the window falls back to the primary display
 - About dialog with version info
 
 ## Keyboard Shortcuts
@@ -94,13 +96,15 @@ pnpm typecheck:web    # renderer
 
 ## Testing
 
-Tests use the built-in `node:test` runner — no extra test framework required.
+Tests use the built-in `node:test` runner — no extra test framework required. Suites live next to their modules in `__tests__/` folders.
 
 ```bash
-# Main process: session storage (atomic writes, snapshot validation, symlink defense)
-node --test src/main/session.test.ts
+# Main process: workspace indexer, file tree ops, session storage, settings,
+# watcher, window state (atomic writes, snapshot validation, symlink defense)
+node --experimental-strip-types --experimental-test-module-mocks --test src/main/__tests__/*.test.ts
 
-# Renderer: tabs store + document persistence (in-memory Vite build, no output artifacts)
+# Renderer: tabs store, workspace store, file tree, document persistence,
+# text diff, scroll sync (in-memory Vite transpile, no output artifacts)
 node scripts/test-session-renderer.mjs            # all suites
 node scripts/test-session-renderer.mjs store      # tabs store only
 node scripts/test-session-renderer.mjs persistence
@@ -127,26 +131,32 @@ See [electron-builder.yml](electron-builder.yml) for build options: per-user ins
 ```
 src/
 ├── main/                  # Main process
-│   ├── index.ts           # Window creation, single-instance lock, file associations, protocols
-│   ├── ipc/               # IPC handlers (file system, dialogs, settings, session, export)
+│   ├── index.ts           # Window creation + state restore, single-instance lock, file associations, protocols
+│   ├── ipc/               # IPC handlers (file system, dialogs, settings, session, export, workspace index)
 │   ├── session.ts         # Session storage: snapshot validation, atomic writes, draft backups
 │   ├── watcher.ts         # chokidar workspace watcher (with self-write marking)
+│   ├── workspaceIndex.ts  # Background workspace indexer (BFS, chunk-streamed, cancellable)
+│   ├── workspaceFiles.ts  # File tree directory listing (ignore rules, sorted entries)
+│   ├── windowState.ts     # Window state persistence + multi-monitor fallback
 │   ├── settings.ts        # Settings read/write + current locale
 │   ├── menu.ts            # Application menu and accelerators
-│   └── i18n.ts            # Native-menu / dialog translations
+│   ├── i18n.ts            # Native-menu / dialog translations
+│   └── __tests__/         # node:test suites for main-process modules
 ├── preload/               # contextBridge exposing the window.kmde API
 ├── shared/                # Types, constants, and locale messages shared by main / renderer
 └── renderer/
     ├── src/
-    │   ├── stores/        # Pinia: tabs (+tests), workspace, settings
-    │   ├── composables/   # useDocumentPersistence: auto-save + session snapshots (+tests)
+    │   ├── stores/        # Pinia: tabs, workspace, settings (+ __tests__)
+    │   ├── composables/   # useDocumentPersistence, useFileTree, useScrollSync (+ __tests__)
+    │   ├── utils/         # fuzzyMatch, textDiff, blockLines (+ __tests__)
     │   ├── i18n/          # vue-i18n instance
     │   ├── components/
+    │   │   ├── icons/     # Unified SVG icon library (category files + barrel export)
     │   │   ├── workbench/ # Layout, title bar, tab bar, status bar, welcome page, about dialog
-    │   │   ├── sidebar/   # File tree
+    │   │   ├── sidebar/   # File tree (paged lazy loading, empty-dir hiding)
     │   │   ├── editor/    # Tiptap editor + CodeMirror source editor
     │   │   ├── outline/   # Outline panel
-    │   │   ├── palette/   # Quick open / command palette
+    │   │   ├── palette/   # Quick open / command palette (backed by the workspace index)
     │   │   ├── conflict/  # External change conflict dialog
     │   │   └── export/    # Export dialog
     │   ├── export/        # HTML export pipeline (offline assets)
