@@ -1,28 +1,3 @@
-<script setup lang="ts">
-import { ref } from 'vue'
-import { NModal, NButton } from 'naive-ui'
-import { IconLogo } from '@/components/icons'
-
-const REPO_URL = 'https://github.com/lwinhong/KMDE'
-const links = [
-  { key: 'about.github', url: REPO_URL },
-  { key: 'about.issues', url: `${REPO_URL}/issues` },
-  { key: 'about.releases', url: `${REPO_URL}/releases` }
-]
-
-const show = ref(false)
-
-function open(): void {
-  show.value = true
-}
-
-function openExternal(url: string): void {
-  window.open(url, '_blank', 'noopener')
-}
-
-defineExpose({ open })
-</script>
-
 <template>
   <NModal :show="show" transform-origin="center" @update:show="show = $event">
     <div class="about-dialog">
@@ -54,6 +29,31 @@ defineExpose({ open })
     </div>
   </NModal>
 </template>
+
+<script setup lang="ts">
+import { ref } from 'vue'
+import { NModal, NButton } from 'naive-ui'
+import { IconLogo } from '@/components/icons'
+
+const REPO_URL = 'https://github.com/lwinhong/KMDE'
+const links = [
+  { key: 'about.github', url: REPO_URL },
+  { key: 'about.issues', url: `${REPO_URL}/issues` },
+  { key: 'about.releases', url: `${REPO_URL}/releases` }
+]
+
+const show = ref(false)
+
+function open(): void {
+  show.value = true
+}
+
+function openExternal(url: string): void {
+  window.open(url, '_blank', 'noopener')
+}
+
+defineExpose({ open })
+</script>
 
 <style scoped>
 .about-dialog {

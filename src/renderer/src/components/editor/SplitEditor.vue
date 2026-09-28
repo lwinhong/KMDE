@@ -1,3 +1,31 @@
+<template>
+  <div ref="rootRef" class="split-editor" @focusin.capture="onFocusIn">
+    <div ref="wysPaneRef" class="split-pane" :style="{ width: `${leftRatio * 100}%` }">
+      <TiptapEditor
+        ref="wysiwygRef"
+        :tab="tab"
+        :locked="locked"
+        @update="onEditorUpdate"
+        @outline-change="onWysiwygOutline"
+        @toggle-mode="emit('toggle-mode')"
+        @scroll="onWysScroll"
+      />
+    </div>
+    <Resizer side="left" @resize="onPaneResize" />
+    <div ref="srcPaneRef" class="split-pane split-pane-source">
+      <div class="split-source-header"></div>
+      <SourceEditor
+        ref="sourceRef"
+        :tab="tab"
+        :locked="locked"
+        @update="onEditorUpdate"
+        @outline-change="onSourceOutline"
+        @scroll="onSrcScroll"
+      />
+    </div>
+  </div>
+</template>
+
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { EditorSelectionState, OutlineItem } from '@shared/types'
@@ -203,34 +231,6 @@ defineExpose({
   getSelectedText
 })
 </script>
-
-<template>
-  <div ref="rootRef" class="split-editor" @focusin.capture="onFocusIn">
-    <div ref="wysPaneRef" class="split-pane" :style="{ width: `${leftRatio * 100}%` }">
-      <TiptapEditor
-        ref="wysiwygRef"
-        :tab="tab"
-        :locked="locked"
-        @update="onEditorUpdate"
-        @outline-change="onWysiwygOutline"
-        @toggle-mode="emit('toggle-mode')"
-        @scroll="onWysScroll"
-      />
-    </div>
-    <Resizer side="left" @resize="onPaneResize" />
-    <div ref="srcPaneRef" class="split-pane split-pane-source">
-      <div class="split-source-header"></div>
-      <SourceEditor
-        ref="sourceRef"
-        :tab="tab"
-        :locked="locked"
-        @update="onEditorUpdate"
-        @outline-change="onSourceOutline"
-        @scroll="onSrcScroll"
-      />
-    </div>
-  </div>
-</template>
 
 <style scoped>
 .split-editor {

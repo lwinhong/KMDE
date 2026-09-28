@@ -1,35 +1,3 @@
-<script setup lang="ts">
-import { computed } from 'vue'
-import { useI18n } from 'vue-i18n'
-import { useSettingsStore } from '../../stores/settings.store'
-import { useTabsStore } from '../../stores/tabs.store'
-import { useWorkspaceStore } from '../../stores/workspace.store'
-import { IconModeSource, IconModeSplit, IconModeWysiwyg } from '@/components/icons'
-
-const settings = useSettingsStore()
-const tabs = useTabsStore()
-const workspace = useWorkspaceStore()
-const { t } = useI18n()
-
-const emit = defineEmits<{
-  (e: 'toggle-mode'): void
-}>()
-
-const charCount = computed(() => {
-  const tab = tabs.activeTab
-  if (!tab) return 0
-  return tab.markdown.replace(/\s/g, '').length
-})
-
-const mode = computed(() => tabs.activeTab?.mode ?? 'wysiwyg')
-
-const modeLabel = computed(() => {
-  if (mode.value === 'source') return t('statusbar.sourceMode')
-  if (mode.value === 'split') return t('statusbar.splitMode')
-  return t('statusbar.wysiwygMode')
-})
-</script>
-
 <template>
   <div class="statusbar">
     <div class="statusbar-left">
@@ -63,6 +31,38 @@ const modeLabel = computed(() => {
     </div>
   </div>
 </template>
+
+<script setup lang="ts">
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { useSettingsStore } from '../../stores/settings.store'
+import { useTabsStore } from '../../stores/tabs.store'
+import { useWorkspaceStore } from '../../stores/workspace.store'
+import { IconModeSource, IconModeSplit, IconModeWysiwyg } from '@/components/icons'
+
+const settings = useSettingsStore()
+const tabs = useTabsStore()
+const workspace = useWorkspaceStore()
+const { t } = useI18n()
+
+const emit = defineEmits<{
+  (e: 'toggle-mode'): void
+}>()
+
+const charCount = computed(() => {
+  const tab = tabs.activeTab
+  if (!tab) return 0
+  return tab.markdown.replace(/\s/g, '').length
+})
+
+const mode = computed(() => tabs.activeTab?.mode ?? 'wysiwyg')
+
+const modeLabel = computed(() => {
+  if (mode.value === 'source') return t('statusbar.sourceMode')
+  if (mode.value === 'split') return t('statusbar.splitMode')
+  return t('statusbar.wysiwygMode')
+})
+</script>
 
 <style scoped>
 .statusbar {

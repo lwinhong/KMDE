@@ -1,3 +1,49 @@
+<template>
+  <Teleport to="body">
+    <div v-if="visible" class="palette-backdrop" @mousedown.self="close">
+      <div class="palette-panel">
+        <div class="palette-input-wrap">
+          <span class="palette-mode-tag">{{ mode === 'files' ? $t('palette.modeFiles') : $t('palette.modeCommands') }}</span>
+          <input
+            ref="inputRef"
+            v-model="query"
+            class="palette-input"
+            type="text"
+            :placeholder="mode === 'files' ? $t('palette.filesPlaceholder') : $t('palette.commandsPlaceholder')"
+            spellcheck="false"
+            @keydown="onKeydown"
+          />
+          <span class="palette-esc">{{ $t('palette.escToClose') }}</span>
+        </div>
+        <div class="palette-list">
+          <template v-if="results.length > 0">
+            <div
+              v-for="(entry, index) in results"
+              :key="entry.kind + entry.id"
+              class="palette-item"
+              :class="{ 'is-selected': index === selectedIndex }"
+              @mouseenter="selectedIndex = index"
+              @click="choose(entry)"
+            >
+              <span class="palette-item-icon">{{ entry.kind === 'file' ? 'MD' : '⌘' }}</span>
+              <span class="palette-item-title">{{ entry.title }}</span>
+              <span v-if="entry.detail" class="palette-item-detail">{{ entry.detail }}</span>
+              <span v-if="entry.shortcut" class="palette-item-shortcut">{{ entry.shortcut }}</span>
+            </div>
+          </template>
+          <div v-else class="palette-empty">
+            {{ mode === 'files' ? (workspace.isOpen ? $t('palette.noFiles') : $t('palette.noWorkspace')) : $t('palette.noCommands') }}
+          </div>
+        </div>
+        <div class="palette-footer">
+          <span>{{ $t('palette.footerSelect') }}</span>
+          <span>{{ $t('palette.footerConfirm') }}</span>
+        </div>
+      </div>
+    </div>
+  </Teleport>
+</template>
+
 <script lang="ts">
 export interface PaletteCommand {
   id: string
@@ -137,52 +183,6 @@ onBeforeUnmount(() => {
 
 defineExpose({ open, close })
 </script>
-
-<template>
-  <Teleport to="body">
-    <div v-if="visible" class="palette-backdrop" @mousedown.self="close">
-      <div class="palette-panel">
-        <div class="palette-input-wrap">
-          <span class="palette-mode-tag">{{ mode === 'files' ? $t('palette.modeFiles') : $t('palette.modeCommands') }}</span>
-          <input
-            ref="inputRef"
-            v-model="query"
-            class="palette-input"
-            type="text"
-            :placeholder="mode === 'files' ? $t('palette.filesPlaceholder') : $t('palette.commandsPlaceholder')"
-            spellcheck="false"
-            @keydown="onKeydown"
-          />
-          <span class="palette-esc">{{ $t('palette.escToClose') }}</span>
-        </div>
-        <div class="palette-list">
-          <template v-if="results.length > 0">
-            <div
-              v-for="(entry, index) in results"
-              :key="entry.kind + entry.id"
-              class="palette-item"
-              :class="{ 'is-selected': index === selectedIndex }"
-              @mouseenter="selectedIndex = index"
-              @click="choose(entry)"
-            >
-              <span class="palette-item-icon">{{ entry.kind === 'file' ? 'MD' : '⌘' }}</span>
-              <span class="palette-item-title">{{ entry.title }}</span>
-              <span v-if="entry.detail" class="palette-item-detail">{{ entry.detail }}</span>
-              <span v-if="entry.shortcut" class="palette-item-shortcut">{{ entry.shortcut }}</span>
-            </div>
-          </template>
-          <div v-else class="palette-empty">
-            {{ mode === 'files' ? (workspace.isOpen ? $t('palette.noFiles') : $t('palette.noWorkspace')) : $t('palette.noCommands') }}
-          </div>
-        </div>
-        <div class="palette-footer">
-          <span>{{ $t('palette.footerSelect') }}</span>
-          <span>{{ $t('palette.footerConfirm') }}</span>
-        </div>
-      </div>
-    </div>
-  </Teleport>
-</template>
 
 <style scoped>
 .palette-backdrop {

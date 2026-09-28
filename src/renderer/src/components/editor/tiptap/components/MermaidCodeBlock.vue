@@ -1,3 +1,75 @@
+<template>
+  <node-view-wrapper class="kme-codeblock" :class="{ 'is-mermaid': isMermaid }">
+    <div class="kme-codeblock-bar" contenteditable="false">
+      <select class="kme-codeblock-lang" :value="language" @change="language = ($event.target as HTMLSelectElement).value">
+        <option v-for="lang in LANGUAGES" :key="lang" :value="lang">
+          {{ lang === '' ? $t('editor.plaintext') : lang }}
+        </option>
+      </select>
+      <span class="kme-codeblock-spacer" />
+      <template v-if="isMermaid">
+        <button
+          class="kme-codeblock-btn"
+          :class="{ 'is-active': previewMode }"
+          :title="$t('editor.previewDiagram')"
+          @click="previewMode = true"
+        >
+          {{ $t('editor.diagram') }}
+        </button>
+        <button
+          class="kme-codeblock-btn"
+          :class="{ 'is-active': !previewMode }"
+          :title="$t('editor.editSource')"
+          @click="previewMode = false"
+        >
+          {{ $t('editor.source') }}
+        </button>
+      </template>
+      <button class="kme-codeblock-btn" :title="$t('editor.copy')" @click="handleCopy">
+        {{ copied ? $t('editor.copied') : $t('editor.copy') }}
+      </button>
+    </div>
+    <div
+      v-if="isMermaid"
+      v-show="previewMode"
+      class="kme-mermaid-preview"
+      :class="{ 'has-error': !!mermaidError }"
+      @dblclick="previewMode = false"
+      @wheel="onPreviewWheel"
+    >
+      <div v-if="svg" class="kme-mermaid-svg" :style="{ zoom: String(zoom) }" v-html="svg"></div>
+      <div v-if="mermaidError" class="kme-mermaid-error">
+        <div class="kme-mermaid-error-title">{{ $t('editor.mermaidRenderFailed') }}</div>
+        <pre class="kme-mermaid-error-detail">{{ mermaidError }}</pre>
+        <button class="kme-codeblock-btn" @click="previewMode = false">{{ $t('editor.viewSourceCode') }}</button>
+      </div>
+      <div v-if="!svg && !mermaidError" class="kme-mermaid-placeholder">{{ $t('editor.emptyDiagram') }}</div>
+      <div v-if="svg" class="kme-mermaid-zoom" contenteditable="false" @dblclick.stop>
+        <button
+          class="kme-mz-btn"
+          :title="$t('editor.zoomOut')"
+          :disabled="zoom <= MIN_ZOOM"
+          @click="zoomOut"
+        >
+          −
+        </button>
+        <button class="kme-mz-label" :title="$t('editor.zoomReset')" @click="resetZoom">
+          {{ Math.round(zoom * 100) }}%
+        </button>
+        <button
+          class="kme-mz-btn"
+          :title="$t('editor.zoomIn')"
+          :disabled="zoom >= MAX_ZOOM"
+          @click="zoomIn"
+        >
+          ＋
+        </button>
+      </div>
+    </div>
+    <pre v-show="!(isMermaid && previewMode)" class="kme-codeblock-pre"><code><node-view-content /></code></pre>
+  </node-view-wrapper>
+</template>
+
 <script lang="ts">
 /* ---------------------------------------------------------------
  * mermaid 渲染服务（真正的模块级作用域，所有实例共享）。
@@ -211,78 +283,6 @@ async function handleCopy(): Promise<void> {
   }
 }
 </script>
-
-<template>
-  <node-view-wrapper class="kme-codeblock" :class="{ 'is-mermaid': isMermaid }">
-    <div class="kme-codeblock-bar" contenteditable="false">
-      <select class="kme-codeblock-lang" :value="language" @change="language = ($event.target as HTMLSelectElement).value">
-        <option v-for="lang in LANGUAGES" :key="lang" :value="lang">
-          {{ lang === '' ? $t('editor.plaintext') : lang }}
-        </option>
-      </select>
-      <span class="kme-codeblock-spacer" />
-      <template v-if="isMermaid">
-        <button
-          class="kme-codeblock-btn"
-          :class="{ 'is-active': previewMode }"
-          :title="$t('editor.previewDiagram')"
-          @click="previewMode = true"
-        >
-          {{ $t('editor.diagram') }}
-        </button>
-        <button
-          class="kme-codeblock-btn"
-          :class="{ 'is-active': !previewMode }"
-          :title="$t('editor.editSource')"
-          @click="previewMode = false"
-        >
-          {{ $t('editor.source') }}
-        </button>
-      </template>
-      <button class="kme-codeblock-btn" :title="$t('editor.copy')" @click="handleCopy">
-        {{ copied ? $t('editor.copied') : $t('editor.copy') }}
-      </button>
-    </div>
-    <div
-      v-if="isMermaid"
-      v-show="previewMode"
-      class="kme-mermaid-preview"
-      :class="{ 'has-error': !!mermaidError }"
-      @dblclick="previewMode = false"
-      @wheel="onPreviewWheel"
-    >
-      <div v-if="svg" class="kme-mermaid-svg" :style="{ zoom: String(zoom) }" v-html="svg"></div>
-      <div v-if="mermaidError" class="kme-mermaid-error">
-        <div class="kme-mermaid-error-title">{{ $t('editor.mermaidRenderFailed') }}</div>
-        <pre class="kme-mermaid-error-detail">{{ mermaidError }}</pre>
-        <button class="kme-codeblock-btn" @click="previewMode = false">{{ $t('editor.viewSourceCode') }}</button>
-      </div>
-      <div v-if="!svg && !mermaidError" class="kme-mermaid-placeholder">{{ $t('editor.emptyDiagram') }}</div>
-      <div v-if="svg" class="kme-mermaid-zoom" contenteditable="false" @dblclick.stop>
-        <button
-          class="kme-mz-btn"
-          :title="$t('editor.zoomOut')"
-          :disabled="zoom <= MIN_ZOOM"
-          @click="zoomOut"
-        >
-          −
-        </button>
-        <button class="kme-mz-label" :title="$t('editor.zoomReset')" @click="resetZoom">
-          {{ Math.round(zoom * 100) }}%
-        </button>
-        <button
-          class="kme-mz-btn"
-          :title="$t('editor.zoomIn')"
-          :disabled="zoom >= MAX_ZOOM"
-          @click="zoomIn"
-        >
-          ＋
-        </button>
-      </div>
-    </div>
-    <pre v-show="!(isMermaid && previewMode)" class="kme-codeblock-pre"><code><node-view-content /></code></pre>
-  </node-view-wrapper>
-</template>
 
 <style scoped>
 .kme-codeblock {

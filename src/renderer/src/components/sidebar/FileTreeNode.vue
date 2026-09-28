@@ -1,3 +1,37 @@
+<template>
+  <div>
+    <div
+      class="ft-node"
+      :style="{ paddingLeft: `${depth * 14 + 8}px` }"
+      @click="onClick"
+      @contextmenu.prevent="emit('contextmenu', node, $event.clientX, $event.clientY)"
+    >
+      <span v-if="node.isDir" class="ft-arrow" :class="{ 'is-open': expanded }">
+        <IconChevronRight :size="12" :stroke-width="2.5" />
+      </span>
+      <span v-else class="ft-arrow-spacer" />
+      <span v-if="node.isDir" class="ft-icon dir">
+        <IconFolder :size="14" />
+      </span>
+      <span v-else class="ft-icon file">
+        <IconMarkdown :size="14" />
+      </span>
+      <span class="ft-label" :title="node.name">{{ node.name }}</span>
+      <span v-if="loading" class="ft-loading">…</span>
+    </div>
+    <template v-if="children">
+      <FileTreeNode
+        v-for="child in children"
+        :key="child.path"
+        :node="child"
+        :depth="depth + 1"
+        @open="onChildOpen"
+        @contextmenu="onChildContext"
+      />
+    </template>
+  </div>
+</template>
+
 <script setup lang="ts">
 import { computed, inject } from 'vue'
 import type { FileNode } from '@shared/types'
@@ -38,40 +72,6 @@ function onChildContext(node: FileNode, x: number, y: number): void {
   emit('contextmenu', node, x, y)
 }
 </script>
-
-<template>
-  <div>
-    <div
-      class="ft-node"
-      :style="{ paddingLeft: `${depth * 14 + 8}px` }"
-      @click="onClick"
-      @contextmenu.prevent="emit('contextmenu', node, $event.clientX, $event.clientY)"
-    >
-      <span v-if="node.isDir" class="ft-arrow" :class="{ 'is-open': expanded }">
-        <IconChevronRight :size="12" :stroke-width="2.5" />
-      </span>
-      <span v-else class="ft-arrow-spacer" />
-      <span v-if="node.isDir" class="ft-icon dir">
-        <IconFolder :size="14" />
-      </span>
-      <span v-else class="ft-icon file">
-        <IconMarkdown :size="14" />
-      </span>
-      <span class="ft-label" :title="node.name">{{ node.name }}</span>
-      <span v-if="loading" class="ft-loading">…</span>
-    </div>
-    <template v-if="children">
-      <FileTreeNode
-        v-for="child in children"
-        :key="child.path"
-        :node="child"
-        :depth="depth + 1"
-        @open="onChildOpen"
-        @contextmenu="onChildContext"
-      />
-    </template>
-  </div>
-</template>
 
 <script lang="ts">
 export interface TreeController {

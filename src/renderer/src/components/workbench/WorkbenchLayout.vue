@@ -1,3 +1,64 @@
+<template>
+  <div class="workbench" @dragover.prevent @drop.prevent="handleDrop">
+    <TitleBar @command="runCommand" @request-close="requestCloseApp()" />
+    <TabBar
+      v-if="tabs.activeTab"
+      :inert="initializing || closingApp || closingTabs.size > 0 || !tabs.sessionReady"
+      @new-file="newFile()"
+      @close-tab="closeTab"
+      @close-tabs="closeTabs"
+      @reveal-tab="revealTab"
+    />
+    <div class="workbench-main" :inert="initializing || closingApp || closingTabs.size > 0 || !tabs.sessionReady">
+      <FileTree v-if="settings.sidebarVisible" @open-file="openFileByPath" @close-folder="closeWorkspace" />
+      <Resizer
+        v-if="settings.sidebarVisible"
+        side="left"
+        @resize="onSidebarResize"
+        @resize-end="settings.persist()"
+      />
+      <div v-if="initializing" class="editor-placeholder" role="status">
+        {{ t('notify.fileLoading') }}
+      </div>
+      <EditorArea
+        v-else-if="tabs.activeTab"
+        ref="editorAreaRef"
+        :locked="closingApp || closingTabs.size > 0"
+        @outline-change="handleOutlineChange"
+        @request-save-as="saveAsTab"
+      />
+      <WelcomePage
+        v-else-if="tabs.sessionReady"
+        @open-file="openFilePicker"
+        @open-folder="openFolderPicker"
+        @new-file="newFile()"
+        @resume-workspace="openLastWorkspace"
+      />
+      <div v-else class="editor-placeholder" role="alert">
+        {{ t('notify.sessionRestoreFailed') }}
+      </div>
+      <Resizer
+        v-if="settings.outlineVisible"
+        side="right"
+        @resize="onOutlineResize"
+        @resize-end="settings.persist()"
+      />
+      <OutlinePanel
+        v-if="settings.outlineVisible"
+        :items="outlineItems"
+        :has-document="!!tabs.activeTab"
+        :active-id="outlineActiveId"
+        @jump="handleOutlineJump"
+      />
+    </div>
+    <StatusBar @toggle-mode="runCommand('toggle-mode')" />
+    <CommandPalette ref="paletteRef" :commands="paletteCommands" @run-command="runPaletteCommand" @open-file="openFileByPath" />
+    <ConflictDialog />
+    <ExportDialog ref="exportRef" />
+    <AboutDialog ref="aboutRef" />
+  </div>
+</template>
+
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onBeforeUnmount, ref, shallowRef, reactive, watch } from 'vue'
 import { useMessage } from 'naive-ui'
@@ -453,67 +514,6 @@ function onOutlineResize(delta: number): void {
   settings.outlineWidth = Math.min(600, Math.max(160, settings.outlineWidth + delta))
 }
 </script>
-
-<template>
-  <div class="workbench" @dragover.prevent @drop.prevent="handleDrop">
-    <TitleBar @command="runCommand" @request-close="requestCloseApp()" />
-    <TabBar
-      v-if="tabs.activeTab"
-      :inert="initializing || closingApp || closingTabs.size > 0 || !tabs.sessionReady"
-      @new-file="newFile()"
-      @close-tab="closeTab"
-      @close-tabs="closeTabs"
-      @reveal-tab="revealTab"
-    />
-    <div class="workbench-main" :inert="initializing || closingApp || closingTabs.size > 0 || !tabs.sessionReady">
-      <FileTree v-if="settings.sidebarVisible" @open-file="openFileByPath" @close-folder="closeWorkspace" />
-      <Resizer
-        v-if="settings.sidebarVisible"
-        side="left"
-        @resize="onSidebarResize"
-        @resize-end="settings.persist()"
-      />
-      <div v-if="initializing" class="editor-placeholder" role="status">
-        {{ t('notify.fileLoading') }}
-      </div>
-      <EditorArea
-        v-else-if="tabs.activeTab"
-        ref="editorAreaRef"
-        :locked="closingApp || closingTabs.size > 0"
-        @outline-change="handleOutlineChange"
-        @request-save-as="saveAsTab"
-      />
-      <WelcomePage
-        v-else-if="tabs.sessionReady"
-        @open-file="openFilePicker"
-        @open-folder="openFolderPicker"
-        @new-file="newFile()"
-        @resume-workspace="openLastWorkspace"
-      />
-      <div v-else class="editor-placeholder" role="alert">
-        {{ t('notify.sessionRestoreFailed') }}
-      </div>
-      <Resizer
-        v-if="settings.outlineVisible"
-        side="right"
-        @resize="onOutlineResize"
-        @resize-end="settings.persist()"
-      />
-      <OutlinePanel
-        v-if="settings.outlineVisible"
-        :items="outlineItems"
-        :has-document="!!tabs.activeTab"
-        :active-id="outlineActiveId"
-        @jump="handleOutlineJump"
-      />
-    </div>
-    <StatusBar @toggle-mode="runCommand('toggle-mode')" />
-    <CommandPalette ref="paletteRef" :commands="paletteCommands" @run-command="runPaletteCommand" @open-file="openFileByPath" />
-    <ConflictDialog />
-    <ExportDialog ref="exportRef" />
-    <AboutDialog ref="aboutRef" />
-  </div>
-</template>
 
 <style scoped>
 .workbench {

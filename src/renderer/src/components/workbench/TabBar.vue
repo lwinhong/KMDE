@@ -1,3 +1,62 @@
+<template>
+  <div class="tabbar">
+    <div class="tabbar-tabs" ref="scrollRef" role="tablist">
+      <button
+        v-if="canScrollLeft"
+        class="tabbar-arrow tabbar-arrow-left"
+        :title="$t('tabbar.scrollLeft')"
+        @click="scrollBy(-200)"
+      >
+        <IconChevronLeft :size="16" />
+      </button>
+      <div
+        v-for="tab in tabs.tabs"
+        :key="tab.id"
+        class="tabbar-tab"
+        :class="{ 'is-active': tab.id === tabs.activeTabId }"
+        role="tab"
+        :title="tab.path ?? tab.fileName"
+        @click="onTabClick(tab.id)"
+        @auxclick="onAuxClick($event, tab.id)"
+        @contextmenu="onTabContextMenu($event, tab)"
+      >
+        <span class="tabbar-tab-icon"><IconMarkdown :size="14" /></span>
+        <span class="tabbar-tab-label">
+          {{ tab.fileName }}
+          <span v-if="tab.deleted" class="tabbar-tab-deleted">{{ $t('tabbar.deleted') }}</span>
+        </span>
+        <span class="tabbar-tab-dot" v-if="tab.dirty" :class="{ 'is-dirty': tab.dirty }" />
+        <button class="tabbar-tab-close" :title="$t('common.close')" @click="onTabClose($event, tab.id)">
+          <IconClose :size="16" :stroke-width="2.5" />
+        </button>
+      </div>
+      <div class="tabbar-edge-right">
+        <button
+          v-if="canScrollRight"
+          class="tabbar-arrow tabbar-arrow-right"
+          :title="$t('tabbar.scrollRight')"
+          @click="scrollBy(200)"
+        >
+          <IconChevronRight :size="16" />
+        </button>
+        <button class="tabbar-new-btn" :title="$t('tabbar.newFile')" @click="emit('new-file')">
+          <IconPlus :size="16" />
+        </button>
+      </div>
+    </div>
+    <n-dropdown
+      trigger="manual"
+      placement="bottom-start"
+      :show="ctxVisible"
+      :x="ctxX"
+      :y="ctxY"
+      :options="ctxOptions"
+      @clickoutside="ctxVisible = false"
+      @select="onCtxSelect"
+    />
+  </div>
+</template>
+
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -128,65 +187,6 @@ function onCtxSelect(key: string | number): void {
   else if (action === 'reveal') emit('reveal-tab', id)
 }
 </script>
-
-<template>
-  <div class="tabbar">
-    <div class="tabbar-tabs" ref="scrollRef" role="tablist">
-      <button
-        v-if="canScrollLeft"
-        class="tabbar-arrow tabbar-arrow-left"
-        :title="$t('tabbar.scrollLeft')"
-        @click="scrollBy(-200)"
-      >
-        <IconChevronLeft :size="16" />
-      </button>
-      <div
-        v-for="tab in tabs.tabs"
-        :key="tab.id"
-        class="tabbar-tab"
-        :class="{ 'is-active': tab.id === tabs.activeTabId }"
-        role="tab"
-        :title="tab.path ?? tab.fileName"
-        @click="onTabClick(tab.id)"
-        @auxclick="onAuxClick($event, tab.id)"
-        @contextmenu="onTabContextMenu($event, tab)"
-      >
-        <span class="tabbar-tab-icon"><IconMarkdown :size="14" /></span>
-        <span class="tabbar-tab-label">
-          {{ tab.fileName }}
-          <span v-if="tab.deleted" class="tabbar-tab-deleted">{{ $t('tabbar.deleted') }}</span>
-        </span>
-        <span class="tabbar-tab-dot" v-if="tab.dirty" :class="{ 'is-dirty': tab.dirty }" />
-        <button class="tabbar-tab-close" :title="$t('common.close')" @click="onTabClose($event, tab.id)">
-          <IconClose :size="16" :stroke-width="2.5" />
-        </button>
-      </div>
-      <div class="tabbar-edge-right">
-        <button
-          v-if="canScrollRight"
-          class="tabbar-arrow tabbar-arrow-right"
-          :title="$t('tabbar.scrollRight')"
-          @click="scrollBy(200)"
-        >
-          <IconChevronRight :size="16" />
-        </button>
-        <button class="tabbar-new-btn" :title="$t('tabbar.newFile')" @click="emit('new-file')">
-          <IconPlus :size="16" />
-        </button>
-      </div>
-    </div>
-    <n-dropdown
-      trigger="manual"
-      placement="bottom-start"
-      :show="ctxVisible"
-      :x="ctxX"
-      :y="ctxY"
-      :options="ctxOptions"
-      @clickoutside="ctxVisible = false"
-      @select="onCtxSelect"
-    />
-  </div>
-</template>
 
 <style scoped>
 .tabbar {

@@ -1,3 +1,11 @@
+<template>
+  <div
+    class="resizer"
+    :class="{ 'is-dragging': dragging }"
+    @mousedown="onDown"
+  ></div>
+</template>
+
 <script setup lang="ts">
 import { ref } from 'vue'
 
@@ -37,14 +45,6 @@ function onDown(e: MouseEvent): void {
   document.body.style.userSelect = 'none'
 }
 </script>
-
-<template>
-  <div
-    class="resizer"
-    :class="{ 'is-dragging': dragging }"
-    @mousedown="onDown"
-  ></div>
-</template>
 
 <style scoped>
 .resizer {

@@ -1,3 +1,93 @@
+<template>
+  <aside class="filetree" :style="{ width: settings.sidebarWidth + 'px' }">
+    <div class="filetree-header">
+      <span class="filetree-title" :title="workspace.root ?? ''">{{ workspace.rootName || $t('sidebar.explorer') }}</span>
+      <span class="filetree-actions">
+        <button class="filetree-action" :title="$t('sidebar.newFile')" @click="newFileAtRoot">
+          <IconPlus :size="16" />
+        </button>
+        <button class="filetree-action" :title="$t('sidebar.refresh')" @click="refreshRoot">
+          <IconRefresh :size="16" />
+        </button>
+        <button
+          v-if="workspace.root"
+          type="button"
+          class="filetree-action filetree-close"
+          :title="$t('sidebar.closeWorkspace')"
+          :aria-label="$t('sidebar.closeWorkspace')"
+          @click="emit('close-folder')"
+        >
+          <IconClose :size="16" />
+        </button>
+        <button class="filetree-action" :title="$t('sidebar.collapse')" @click="settings.toggleSidebar()">
+          <IconChevronLeft :size="16" />
+        </button>
+      </span>
+    </div>
+    <div class="filetree-body" :aria-busy="rootLoading">
+      <template v-if="workspace.root">
+        <div v-if="rootLoading" class="filetree-status" role="status">{{ $t('sidebar.loading') }}</div>
+        <div v-else-if="workspace.indexing" class="filetree-status" role="status">{{ $t('sidebar.indexing') }}</div>
+        <FileTreeNode
+          v-for="node in visibleRootChildren"
+          :key="node.path"
+          :node="node"
+          :depth="0"
+          @open="openNode"
+          @contextmenu="onContextMenu"
+        />
+        <button v-if="hasMoreRoot" type="button" class="filetree-load-more" @click="loadMore()">
+          {{ $t('sidebar.loadMore') }}
+        </button>
+        <button
+          v-for="directory in moreDirectoryLabels"
+          :key="directory.path"
+          type="button"
+          class="filetree-load-more"
+          :title="directory.path"
+          @click="loadMore(directory.path)"
+        >
+          {{ $t('sidebar.loadMore') }} · {{ directory.label }} ({{ directory.remaining }})
+        </button>
+        <div v-if="!rootLoading && rootChildren.length === 0" class="filetree-empty">{{ $t('sidebar.emptyFolder') }}</div>
+      </template>
+      <div v-else class="filetree-empty">{{ $t('sidebar.noWorkspace') }}<br />{{ $t('sidebar.noWorkspaceHint') }}</div>
+    </div>
+
+    <n-dropdown
+      trigger="manual"
+      placement="bottom-start"
+      :show="ctxVisible"
+      :x="ctxX"
+      :y="ctxY"
+      :options="ctxOptions"
+      @clickoutside="ctxVisible = false"
+      @select="onCtxSelect"
+    />
+
+    <n-modal
+      v-model:show="nameDialog.visible"
+      preset="card"
+      :title="nameDialog.title"
+      style="width: 380px"
+      :mask-closable="false"
+    >
+      <n-input
+        ref="nameInputRef"
+        v-model:value="nameDialog.value"
+        :placeholder="$t('sidebar.inputName')"
+        @keydown.enter="confirmNameDialog"
+      />
+      <template #footer>
+        <div class="name-dialog-footer">
+          <n-button size="small" @click="nameDialog.visible = false">{{ $t('common.cancel') }}</n-button>
+          <n-button size="small" type="primary" :loading="nameDialog.busy" @click="confirmNameDialog">{{ $t('common.ok') }}</n-button>
+        </div>
+      </template>
+    </n-modal>
+  </aside>
+</template>
+
 <script setup lang="ts">
 import { computed, nextTick, onScopeDispose, provide, reactive, ref, watch } from 'vue'
 import { NDropdown, NModal, NInput, NButton, useMessage } from 'naive-ui'
@@ -199,96 +289,6 @@ onScopeDispose(() => {
   resetDialogs()
 })
 </script>
-
-<template>
-  <aside class="filetree" :style="{ width: settings.sidebarWidth + 'px' }">
-    <div class="filetree-header">
-      <span class="filetree-title" :title="workspace.root ?? ''">{{ workspace.rootName || $t('sidebar.explorer') }}</span>
-      <span class="filetree-actions">
-        <button class="filetree-action" :title="$t('sidebar.newFile')" @click="newFileAtRoot">
-          <IconPlus :size="16" />
-        </button>
-        <button class="filetree-action" :title="$t('sidebar.refresh')" @click="refreshRoot">
-          <IconRefresh :size="16" />
-        </button>
-        <button
-          v-if="workspace.root"
-          type="button"
-          class="filetree-action filetree-close"
-          :title="$t('sidebar.closeWorkspace')"
-          :aria-label="$t('sidebar.closeWorkspace')"
-          @click="emit('close-folder')"
-        >
-          <IconClose :size="16" />
-        </button>
-        <button class="filetree-action" :title="$t('sidebar.collapse')" @click="settings.toggleSidebar()">
-          <IconChevronLeft :size="16" />
-        </button>
-      </span>
-    </div>
-    <div class="filetree-body" :aria-busy="rootLoading">
-      <template v-if="workspace.root">
-        <div v-if="rootLoading" class="filetree-status" role="status">{{ $t('sidebar.loading') }}</div>
-        <div v-else-if="workspace.indexing" class="filetree-status" role="status">{{ $t('sidebar.indexing') }}</div>
-        <FileTreeNode
-          v-for="node in visibleRootChildren"
-          :key="node.path"
-          :node="node"
-          :depth="0"
-          @open="openNode"
-          @contextmenu="onContextMenu"
-        />
-        <button v-if="hasMoreRoot" type="button" class="filetree-load-more" @click="loadMore()">
-          {{ $t('sidebar.loadMore') }}
-        </button>
-        <button
-          v-for="directory in moreDirectoryLabels"
-          :key="directory.path"
-          type="button"
-          class="filetree-load-more"
-          :title="directory.path"
-          @click="loadMore(directory.path)"
-        >
-          {{ $t('sidebar.loadMore') }} · {{ directory.label }} ({{ directory.remaining }})
-        </button>
-        <div v-if="!rootLoading && rootChildren.length === 0" class="filetree-empty">{{ $t('sidebar.emptyFolder') }}</div>
-      </template>
-      <div v-else class="filetree-empty">{{ $t('sidebar.noWorkspace') }}<br />{{ $t('sidebar.noWorkspaceHint') }}</div>
-    </div>
-
-    <n-dropdown
-      trigger="manual"
-      placement="bottom-start"
-      :show="ctxVisible"
-      :x="ctxX"
-      :y="ctxY"
-      :options="ctxOptions"
-      @clickoutside="ctxVisible = false"
-      @select="onCtxSelect"
-    />
-
-    <n-modal
-      v-model:show="nameDialog.visible"
-      preset="card"
-      :title="nameDialog.title"
-      style="width: 380px"
-      :mask-closable="false"
-    >
-      <n-input
-        ref="nameInputRef"
-        v-model:value="nameDialog.value"
-        :placeholder="$t('sidebar.inputName')"
-        @keydown.enter="confirmNameDialog"
-      />
-      <template #footer>
-        <div class="name-dialog-footer">
-          <n-button size="small" @click="nameDialog.visible = false">{{ $t('common.cancel') }}</n-button>
-          <n-button size="small" type="primary" :loading="nameDialog.busy" @click="confirmNameDialog">{{ $t('common.ok') }}</n-button>
-        </div>
-      </template>
-    </n-modal>
-  </aside>
-</template>
 
 <style scoped>
 .filetree {

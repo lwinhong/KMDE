@@ -1,18 +1,3 @@
-<script setup lang="ts">
-import { computed } from 'vue'
-import { NConfigProvider, NDialogProvider, NMessageProvider, darkTheme, zhCN, dateZhCN, enUS, dateEnUS } from 'naive-ui'
-import type { GlobalTheme } from 'naive-ui'
-import { useSettingsStore } from './stores/settings.store'
-import WorkbenchLayout from './components/workbench/WorkbenchLayout.vue'
-
-const settings = useSettingsStore()
-
-const naiveLocale = computed(() => (settings.language === 'en-US' ? enUS : zhCN))
-const naiveDateLocale = computed(() => (settings.language === 'en-US' ? dateEnUS : dateZhCN))
-const naiveTheme = computed<GlobalTheme | null>(() => (settings.isDark ? darkTheme : null))
-
-</script>
-
 <template>
   <n-config-provider
     :theme="naiveTheme"
@@ -36,3 +21,18 @@ const naiveTheme = computed<GlobalTheme | null>(() => (settings.isDark ? darkThe
     </n-dialog-provider>
   </n-config-provider>
 </template>
+
+<script setup lang="ts">
+import { computed } from 'vue'
+import { NConfigProvider, NDialogProvider, NMessageProvider, darkTheme, zhCN, dateZhCN, enUS, dateEnUS } from 'naive-ui'
+import type { GlobalTheme } from 'naive-ui'
+import { useSettingsStore } from './stores/settings.store'
+import WorkbenchLayout from './components/workbench/WorkbenchLayout.vue'
+
+const settings = useSettingsStore()
+
+const naiveLocale = computed(() => (settings.language === 'en-US' ? enUS : zhCN))
+const naiveDateLocale = computed(() => (settings.language === 'en-US' ? dateEnUS : dateZhCN))
+const naiveTheme = computed<GlobalTheme | null>(() => (settings.isDark ? darkTheme : null))
+
+</script>

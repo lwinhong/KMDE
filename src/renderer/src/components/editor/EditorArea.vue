@@ -1,3 +1,68 @@
+<template>
+  <div class="editor-area">
+    <SearchReplaceBar
+      v-if="searchVisible"
+      ref="searchBarRef"
+      :total="searchTotal"
+      :current="searchCurrent"
+      :offset-top="searchOffsetTop"
+      @find="onSearchFind"
+      @find-next="onSearchNext"
+      @find-prev="onSearchPrev"
+      @replace="onSearchReplace"
+      @replace-all="onSearchReplaceAll"
+      @close="closeSearch"
+    />
+    <template v-for="tab in tabs.tabs" :key="tab.id">
+      <TiptapEditor
+        v-if="!tab.loading && tab.mode === 'wysiwyg'"
+        v-show="tab.id === tabs.activeTabId"
+        :ref="(el) => setEditorRef(tab.id, el as EditorInstance | null)"
+        :tab="tab"
+        :locked="locked"
+        @update="(md: string) => onEditorUpdate(tab, md)"
+        @outline-change="(items: OutlineItem[], activeId: string | null) => onEditorOutline(tab, items, activeId)"
+        @toggle-mode="onToggleMode"
+      />
+      <SplitEditor
+        v-else-if="!tab.loading && tab.mode === 'split'"
+        v-show="tab.id === tabs.activeTabId"
+        :ref="(el) => setEditorRef(tab.id, el as EditorInstance | null)"
+        :tab="tab"
+        :locked="locked"
+        @update="(md: string) => onEditorUpdate(tab, md)"
+        @outline-change="(items: OutlineItem[], activeId: string | null) => onEditorOutline(tab, items, activeId)"
+        @toggle-mode="onToggleMode"
+      />
+      <SourceEditor
+        v-else-if="!tab.loading && tab.mode === 'source'"
+        v-show="tab.id === tabs.activeTabId"
+        :ref="(el) => setEditorRef(tab.id, el as EditorInstance | null)"
+        :tab="tab"
+        :locked="locked"
+        @update="(md: string) => onEditorUpdate(tab, md)"
+        @outline-change="(items: OutlineItem[], activeId: string | null) => onEditorOutline(tab, items, activeId)"
+      />
+      <div
+        v-else
+        v-show="tab.id === tabs.activeTabId"
+        class="editor-skeleton"
+      >
+        <div class="editor-skeleton-page">
+          <div class="skeleton-line is-title"></div>
+          <div class="skeleton-line"></div>
+          <div class="skeleton-line"></div>
+          <div class="skeleton-line"></div>
+          <div class="skeleton-line"></div>
+          <div class="skeleton-line"></div>
+          <div class="skeleton-line"></div>
+          <div class="skeleton-line"></div>
+        </div>
+      </div>
+    </template>
+  </div>
+</template>
+
 <script setup lang="ts">
 import { watch, nextTick, onBeforeUnmount, onMounted, ref, computed } from 'vue'
 import type { EditorSelectionState, OutlineItem } from '@shared/types'
@@ -193,71 +258,6 @@ function onToggleMode(): void {
 
 defineExpose({ flushActive, flushTab, flushAll, jumpTo, focusActive })
 </script>
-
-<template>
-  <div class="editor-area">
-    <SearchReplaceBar
-      v-if="searchVisible"
-      ref="searchBarRef"
-      :total="searchTotal"
-      :current="searchCurrent"
-      :offset-top="searchOffsetTop"
-      @find="onSearchFind"
-      @find-next="onSearchNext"
-      @find-prev="onSearchPrev"
-      @replace="onSearchReplace"
-      @replace-all="onSearchReplaceAll"
-      @close="closeSearch"
-    />
-    <template v-for="tab in tabs.tabs" :key="tab.id">
-      <TiptapEditor
-        v-if="!tab.loading && tab.mode === 'wysiwyg'"
-        v-show="tab.id === tabs.activeTabId"
-        :ref="(el) => setEditorRef(tab.id, el as EditorInstance | null)"
-        :tab="tab"
-        :locked="locked"
-        @update="(md: string) => onEditorUpdate(tab, md)"
-        @outline-change="(items: OutlineItem[], activeId: string | null) => onEditorOutline(tab, items, activeId)"
-        @toggle-mode="onToggleMode"
-      />
-      <SplitEditor
-        v-else-if="!tab.loading && tab.mode === 'split'"
-        v-show="tab.id === tabs.activeTabId"
-        :ref="(el) => setEditorRef(tab.id, el as EditorInstance | null)"
-        :tab="tab"
-        :locked="locked"
-        @update="(md: string) => onEditorUpdate(tab, md)"
-        @outline-change="(items: OutlineItem[], activeId: string | null) => onEditorOutline(tab, items, activeId)"
-        @toggle-mode="onToggleMode"
-      />
-      <SourceEditor
-        v-else-if="!tab.loading && tab.mode === 'source'"
-        v-show="tab.id === tabs.activeTabId"
-        :ref="(el) => setEditorRef(tab.id, el as EditorInstance | null)"
-        :tab="tab"
-        :locked="locked"
-        @update="(md: string) => onEditorUpdate(tab, md)"
-        @outline-change="(items: OutlineItem[], activeId: string | null) => onEditorOutline(tab, items, activeId)"
-      />
-      <div
-        v-else
-        v-show="tab.id === tabs.activeTabId"
-        class="editor-skeleton"
-      >
-        <div class="editor-skeleton-page">
-          <div class="skeleton-line is-title"></div>
-          <div class="skeleton-line"></div>
-          <div class="skeleton-line"></div>
-          <div class="skeleton-line"></div>
-          <div class="skeleton-line"></div>
-          <div class="skeleton-line"></div>
-          <div class="skeleton-line"></div>
-          <div class="skeleton-line"></div>
-        </div>
-      </div>
-    </template>
-  </div>
-</template>
 
 <style scoped>
 .editor-area {

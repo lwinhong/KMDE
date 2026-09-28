@@ -1,25 +1,3 @@
-<script setup lang="ts">
-import { computed } from 'vue'
-import { NModal, NButton } from 'naive-ui'
-import { useTabsStore } from '@/stores/tabs.store'
-import { basename } from '@/stores/pathUtils'
-
-const tabs = useTabsStore()
-
-const show = computed(() => tabs.conflict !== null)
-
-const fileName = computed(() => (tabs.conflict ? basename(tabs.conflict.path) : ''))
-
-const diskPreview = computed(() => {
-  const content = tabs.conflict?.diskContent ?? ''
-  return content.length > 500 ? `${content.slice(0, 500)}…` : content
-})
-
-function resolve(action: 'load-disk' | 'keep'): void {
-  tabs.resolveConflict(action)
-}
-</script>
-
 <template>
   <NModal
     :show="show"
@@ -42,6 +20,28 @@ function resolve(action: 'load-disk' | 'keep'): void {
     </div>
   </NModal>
 </template>
+
+<script setup lang="ts">
+import { computed } from 'vue'
+import { NModal, NButton } from 'naive-ui'
+import { useTabsStore } from '@/stores/tabs.store'
+import { basename } from '@/stores/pathUtils'
+
+const tabs = useTabsStore()
+
+const show = computed(() => tabs.conflict !== null)
+
+const fileName = computed(() => (tabs.conflict ? basename(tabs.conflict.path) : ''))
+
+const diskPreview = computed(() => {
+  const content = tabs.conflict?.diskContent ?? ''
+  return content.length > 500 ? `${content.slice(0, 500)}…` : content
+})
+
+function resolve(action: 'load-disk' | 'keep'): void {
+  tabs.resolveConflict(action)
+}
+</script>
 
 <style scoped>
 .conflict-dialog {

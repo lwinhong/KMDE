@@ -1,3 +1,39 @@
+<template>
+  <NModal :show="show" :mask-closable="!exporting" transform-origin="center" @update:show="show = $event">
+    <div class="export-dialog">
+      <div class="export-title">{{ $t('export.title') }}</div>
+      <div class="export-file">{{ tab?.fileName }}</div>
+
+      <div class="export-field">
+        <label class="export-label">{{ $t('export.format') }}</label>
+        <NRadioGroup :value="format" size="small" @update:value="onFormatChange">
+          <NRadioButton value="html">HTML</NRadioButton>
+          <NRadioButton value="pdf">PDF</NRadioButton>
+        </NRadioGroup>
+      </div>
+
+      <div class="export-field">
+        <label class="export-label">{{ $t('export.outputPath') }}</label>
+        <div class="export-path-row">
+          <NInput v-model:value="outputPath" size="small" :disabled="exporting" :placeholder="$t('export.chooseOutput')" />
+          <NButton size="small" quaternary :disabled="exporting" @click="browse">{{ $t('export.browse') }}</NButton>
+        </div>
+      </div>
+
+      <div class="export-hint">
+        {{ format === 'pdf' ? $t('export.pdfHint') : $t('export.htmlHint') }}
+      </div>
+
+      <div class="export-actions">
+        <NButton size="small" quaternary :disabled="exporting" @click="show = false">{{ $t('common.cancel') }}</NButton>
+        <NButton size="small" type="primary" :loading="exporting" :disabled="!canConfirm" @click="confirm">
+          {{ $t('export.confirm') }}
+        </NButton>
+      </div>
+    </div>
+  </NModal>
+</template>
+
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { NModal, NButton, NRadioGroup, NRadioButton, NInput, useMessage } from 'naive-ui'
@@ -65,42 +101,6 @@ async function confirm(): Promise<void> {
 
 defineExpose({ open })
 </script>
-
-<template>
-  <NModal :show="show" :mask-closable="!exporting" transform-origin="center" @update:show="show = $event">
-    <div class="export-dialog">
-      <div class="export-title">{{ $t('export.title') }}</div>
-      <div class="export-file">{{ tab?.fileName }}</div>
-
-      <div class="export-field">
-        <label class="export-label">{{ $t('export.format') }}</label>
-        <NRadioGroup :value="format" size="small" @update:value="onFormatChange">
-          <NRadioButton value="html">HTML</NRadioButton>
-          <NRadioButton value="pdf">PDF</NRadioButton>
-        </NRadioGroup>
-      </div>
-
-      <div class="export-field">
-        <label class="export-label">{{ $t('export.outputPath') }}</label>
-        <div class="export-path-row">
-          <NInput v-model:value="outputPath" size="small" :disabled="exporting" :placeholder="$t('export.chooseOutput')" />
-          <NButton size="small" quaternary :disabled="exporting" @click="browse">{{ $t('export.browse') }}</NButton>
-        </div>
-      </div>
-
-      <div class="export-hint">
-        {{ format === 'pdf' ? $t('export.pdfHint') : $t('export.htmlHint') }}
-      </div>
-
-      <div class="export-actions">
-        <NButton size="small" quaternary :disabled="exporting" @click="show = false">{{ $t('common.cancel') }}</NButton>
-        <NButton size="small" type="primary" :loading="exporting" :disabled="!canConfirm" @click="confirm">
-          {{ $t('export.confirm') }}
-        </NButton>
-      </div>
-    </div>
-  </NModal>
-</template>
 
 <style scoped>
 .export-dialog {

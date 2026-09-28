@@ -1,3 +1,59 @@
+<template>
+  <div class="title-bar" :class="{ 'is-maximized': maximized }">
+    <div class="title-bar-left">
+      <div class="title-bar-logo">
+        <IconLogo :size="16" />
+      </div>
+      <NDropdown
+        v-for="menu in menus"
+        :key="menu.key"
+        size="small"
+        trigger="click"
+        :options="(menu as DropdownOption).children"
+        placement="bottom-start"
+        :show-arrow="false"
+        @select="onMenuSelect"
+      >
+        <button class="title-bar-menu-btn">{{ (menu as DropdownOption).label }}</button>
+      </NDropdown>
+    </div>
+
+    <div class="title-bar-title" :title="title">{{ title }}</div>
+
+    <div class="title-bar-toggles">
+      <button
+        class="title-bar-toggle"
+        :class="{ active: settings.sidebarVisible }"
+        :title="settings.sidebarVisible ? t('sidebar.collapse') : t('sidebar.expand')"
+        @click="settings.toggleSidebar()"
+      >
+        <IconPanelSidebar />
+      </button>
+      <button
+        class="title-bar-toggle"
+        :class="{ active: settings.outlineVisible }"
+        :title="settings.outlineVisible ? t('outline.collapse') : t('outline.expand')"
+        @click="settings.toggleOutline()"
+      >
+        <IconPanelOutline />
+      </button>
+    </div>
+
+    <div class="title-bar-controls">
+      <button class="title-bar-ctl" :title="$t('workbench.minimize')" @click="minimize">
+        <IconWindowMinimize />
+      </button>
+      <button class="title-bar-ctl" :title="maximized ? $t('workbench.restore') : $t('workbench.maximize')" @click="toggleMaximize">
+        <IconWindowMaximize v-if="!maximized" />
+        <IconWindowRestore v-else />
+      </button>
+      <button class="title-bar-ctl title-bar-close" :title="$t('common.close')" @click="requestClose">
+        <IconWindowClose />
+      </button>
+    </div>
+  </div>
+</template>
+
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, computed, h } from 'vue'
 import { NDropdown } from 'naive-ui'
@@ -161,62 +217,6 @@ function onMenuSelect(key: string | number): void {
   }
 }
 </script>
-
-<template>
-  <div class="title-bar" :class="{ 'is-maximized': maximized }">
-    <div class="title-bar-left">
-      <div class="title-bar-logo">
-        <IconLogo :size="16" />
-      </div>
-      <NDropdown
-        v-for="menu in menus"
-        :key="menu.key"
-        size="small"
-        trigger="click"
-        :options="(menu as DropdownOption).children"
-        placement="bottom-start"
-        :show-arrow="false"
-        @select="onMenuSelect"
-      >
-        <button class="title-bar-menu-btn">{{ (menu as DropdownOption).label }}</button>
-      </NDropdown>
-    </div>
-
-    <div class="title-bar-title" :title="title">{{ title }}</div>
-
-    <div class="title-bar-toggles">
-      <button
-        class="title-bar-toggle"
-        :class="{ active: settings.sidebarVisible }"
-        :title="settings.sidebarVisible ? t('sidebar.collapse') : t('sidebar.expand')"
-        @click="settings.toggleSidebar()"
-      >
-        <IconPanelSidebar />
-      </button>
-      <button
-        class="title-bar-toggle"
-        :class="{ active: settings.outlineVisible }"
-        :title="settings.outlineVisible ? t('outline.collapse') : t('outline.expand')"
-        @click="settings.toggleOutline()"
-      >
-        <IconPanelOutline />
-      </button>
-    </div>
-
-    <div class="title-bar-controls">
-      <button class="title-bar-ctl" :title="$t('workbench.minimize')" @click="minimize">
-        <IconWindowMinimize />
-      </button>
-      <button class="title-bar-ctl" :title="maximized ? $t('workbench.restore') : $t('workbench.maximize')" @click="toggleMaximize">
-        <IconWindowMaximize v-if="!maximized" />
-        <IconWindowRestore v-else />
-      </button>
-      <button class="title-bar-ctl title-bar-close" :title="$t('common.close')" @click="requestClose">
-        <IconWindowClose />
-      </button>
-    </div>
-  </div>
-</template>
 
 <style scoped>
 .title-bar {

@@ -1,3 +1,7 @@
+<template>
+  <div ref="hostRef" class="source-editor"></div>
+</template>
+
 <script setup lang="ts">
 import { onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import {
@@ -425,10 +429,6 @@ defineExpose({
   getSelectedText
 })
 </script>
-
-<template>
-  <div ref="hostRef" class="source-editor"></div>
-</template>
 
 <style scoped>
 .source-editor {

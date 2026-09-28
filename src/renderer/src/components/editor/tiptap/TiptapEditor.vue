@@ -1,3 +1,57 @@
+<template>
+  <div ref="wrapperRef" class="tiptap-editor-wrapper" :inert="locked">
+    <MenuBar v-if="editor" :editor="editor" :source-mode="false" :use-source-mode="true" :upload-fn="imageUploadFn"
+      @toggle-source="emit('toggle-mode')" />
+    <div v-show="editor" ref="editorContentRef" class="notion-editor-content">
+      <BubbleMenu v-if="editor" :editor="editor" :tippy-options="{ duration: 100, maxWidth: 'none' }">
+        <div class="notion-bubble-toolbar">
+          <MarkButtons :editor="editor" :size="16" />
+          <div class="notion-bubble-sep" />
+          <LinkPopover :editor="editor" :size="16" />
+          <HighlightPicker :editor="editor" :size="16" />
+        </div>
+      </BubbleMenu>
+      <Teleport to="body">
+        <div v-if="tableToolbarVisible && editor" class="notion-table-toolbar" :style="tableToolbarStyle" :inert="locked">
+          <button class="ntb-btn" :title="$t('editor.addColBefore')"
+            @click="editor.chain().focus().addColumnBefore().run()">
+            <IconAddColumnBefore :size="18" />
+          </button>
+          <button class="ntb-btn" :title="$t('editor.addColAfter')"
+            @click="editor.chain().focus().addColumnAfter().run()">
+            <IconAddColumnAfter :size="18" />
+          </button>
+          <div class="ntb-divider" />
+          <button class="ntb-btn" :title="$t('editor.addRowAbove')"
+            @click="editor.chain().focus().addRowBefore().run()">
+            <IconAddRowBefore :size="18" />
+          </button>
+          <button class="ntb-btn" :title="$t('editor.addRowBelow')" @click="editor.chain().focus().addRowAfter().run()">
+            <IconAddRowAfter :size="18" />
+          </button>
+          <div class="ntb-divider" />
+          <button class="ntb-btn" :disabled="!editor.can().deleteColumn()" :title="$t('editor.deleteColumn')"
+            @click="editor.chain().focus().deleteColumn().run()">
+            <IconDeleteColumn :size="18" />
+          </button>
+          <button class="ntb-btn" :disabled="!editor.can().deleteRow()" :title="$t('editor.deleteRow')"
+            @click="editor.chain().focus().deleteRow().run()">
+            <IconDeleteRow :size="18" />
+          </button>
+          <div class="ntb-divider" />
+          <button class="ntb-btn ntb-danger" :title="$t('editor.deleteTable')"
+            @click="editor.chain().focus().deleteTable().run()">
+            <IconDeleteTable :size="18" />
+          </button>
+        </div>
+      </Teleport>
+      <div class="tiptap-editor-page">
+        <EditorContent :editor="editor" />
+      </div>
+    </div>
+  </div>
+</template>
+
 <script setup lang="ts">
 import { ref, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useEditor, EditorContent } from '@tiptap/vue-3'
@@ -556,60 +610,6 @@ defineExpose({
   getSelectedText
 })
 </script>
-
-<template>
-  <div ref="wrapperRef" class="tiptap-editor-wrapper" :inert="locked">
-    <MenuBar v-if="editor" :editor="editor" :source-mode="false" :use-source-mode="true" :upload-fn="imageUploadFn"
-      @toggle-source="emit('toggle-mode')" />
-    <div v-show="editor" ref="editorContentRef" class="notion-editor-content">
-      <BubbleMenu v-if="editor" :editor="editor" :tippy-options="{ duration: 100, maxWidth: 'none' }">
-        <div class="notion-bubble-toolbar">
-          <MarkButtons :editor="editor" :size="16" />
-          <div class="notion-bubble-sep" />
-          <LinkPopover :editor="editor" :size="16" />
-          <HighlightPicker :editor="editor" :size="16" />
-        </div>
-      </BubbleMenu>
-      <Teleport to="body">
-        <div v-if="tableToolbarVisible && editor" class="notion-table-toolbar" :style="tableToolbarStyle" :inert="locked">
-          <button class="ntb-btn" :title="$t('editor.addColBefore')"
-            @click="editor.chain().focus().addColumnBefore().run()">
-            <IconAddColumnBefore :size="18" />
-          </button>
-          <button class="ntb-btn" :title="$t('editor.addColAfter')"
-            @click="editor.chain().focus().addColumnAfter().run()">
-            <IconAddColumnAfter :size="18" />
-          </button>
-          <div class="ntb-divider" />
-          <button class="ntb-btn" :title="$t('editor.addRowAbove')"
-            @click="editor.chain().focus().addRowBefore().run()">
-            <IconAddRowBefore :size="18" />
-          </button>
-          <button class="ntb-btn" :title="$t('editor.addRowBelow')" @click="editor.chain().focus().addRowAfter().run()">
-            <IconAddRowAfter :size="18" />
-          </button>
-          <div class="ntb-divider" />
-          <button class="ntb-btn" :disabled="!editor.can().deleteColumn()" :title="$t('editor.deleteColumn')"
-            @click="editor.chain().focus().deleteColumn().run()">
-            <IconDeleteColumn :size="18" />
-          </button>
-          <button class="ntb-btn" :disabled="!editor.can().deleteRow()" :title="$t('editor.deleteRow')"
-            @click="editor.chain().focus().deleteRow().run()">
-            <IconDeleteRow :size="18" />
-          </button>
-          <div class="ntb-divider" />
-          <button class="ntb-btn ntb-danger" :title="$t('editor.deleteTable')"
-            @click="editor.chain().focus().deleteTable().run()">
-            <IconDeleteTable :size="18" />
-          </button>
-        </div>
-      </Teleport>
-      <div class="tiptap-editor-page">
-        <EditorContent :editor="editor" />
-      </div>
-    </div>
-  </div>
-</template>
 
 <style scoped>
 .tiptap-editor-wrapper {

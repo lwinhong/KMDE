@@ -1,16 +1,3 @@
-<script setup lang="ts">
-import { useSettingsStore } from '../../stores/settings.store'
-
-const settings = useSettingsStore()
-
-defineEmits<{
-  (e: 'open-file'): void
-  (e: 'open-folder'): void
-  (e: 'new-file'): void
-  (e: 'resume-workspace'): void
-}>()
-</script>
-
 <template>
   <div class="welcome">
     <div class="welcome-hero">
@@ -33,6 +20,19 @@ defineEmits<{
     </div>
   </div>
 </template>
+
+<script setup lang="ts">
+import { useSettingsStore } from '../../stores/settings.store'
+
+const settings = useSettingsStore()
+
+defineEmits<{
+  (e: 'open-file'): void
+  (e: 'open-folder'): void
+  (e: 'new-file'): void
+  (e: 'resume-workspace'): void
+}>()
+</script>
 
 <style scoped>
 .welcome {

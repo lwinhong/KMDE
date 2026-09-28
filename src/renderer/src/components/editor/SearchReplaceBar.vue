@@ -1,3 +1,67 @@
+<template>
+  <div class="search-bar" :class="{ 'is-expanded': showReplace }" :style="{ top: `${offsetTop}px` }">
+    <div class="search-row">
+      <span class="search-icon" aria-hidden="true">
+        <IconSearch :size="14" />
+      </span>
+      <input
+        ref="findInputRef"
+        v-model="query"
+        class="search-input"
+        type="text"
+        spellcheck="false"
+        :placeholder="$t('search.findPlaceholder')"
+        @input="onQueryInput"
+        @keydown.enter.exact.prevent="onEnter"
+        @keydown.enter.shift.prevent="emit('find-prev')"
+        @keydown.esc.prevent="emit('close')"
+      />
+      <span class="search-count">{{ countLabel }}</span>
+      <button class="search-icon-btn" :disabled="!total" :title="$t('search.prev')" @click="emit('find-prev')">
+        <IconChevronUp :size="14" />
+      </button>
+      <button class="search-icon-btn" :disabled="!total" :title="$t('search.next')" @click="emit('find-next')">
+        <IconChevronDown :size="14" />
+      </button>
+      <button
+        class="search-icon-btn is-text"
+        :class="{ 'is-active': caseSensitive }"
+        :title="$t('search.caseSensitive')"
+        @click="toggleCase"
+      >
+        Aa
+      </button>
+      <button
+        class="search-icon-btn is-text"
+        :class="{ 'is-active': showReplace }"
+        :title="$t('search.toggleReplace')"
+        @click="toggleReplace"
+      >
+        <IconSwapArrows :size="14" />
+      </button>
+      <button class="search-icon-btn" :title="$t('common.close')" @click="emit('close')">
+        <IconClose :size="14" />
+      </button>
+    </div>
+    <div v-if="showReplace" class="search-row replace-row">
+      <span class="search-icon" aria-hidden="true">
+        <IconReplace :size="14" />
+      </span>
+      <input
+        v-model="replacement"
+        class="search-input"
+        type="text"
+        spellcheck="false"
+        :placeholder="$t('search.replacePlaceholder')"
+        @keydown.enter.prevent="onReplace"
+        @keydown.esc.prevent="emit('close')"
+      />
+      <button class="search-action" :disabled="!total" @click="onReplace">{{ $t('search.replace') }}</button>
+      <button class="search-action" :disabled="!total" @click="onReplaceAll">{{ $t('search.replaceAll') }}</button>
+    </div>
+  </div>
+</template>
+
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref } from 'vue'
 import {
@@ -86,70 +150,6 @@ onMounted(() => {
 
 defineExpose({ focus })
 </script>
-
-<template>
-  <div class="search-bar" :class="{ 'is-expanded': showReplace }" :style="{ top: `${offsetTop}px` }">
-    <div class="search-row">
-      <span class="search-icon" aria-hidden="true">
-        <IconSearch :size="14" />
-      </span>
-      <input
-        ref="findInputRef"
-        v-model="query"
-        class="search-input"
-        type="text"
-        spellcheck="false"
-        :placeholder="$t('search.findPlaceholder')"
-        @input="onQueryInput"
-        @keydown.enter.exact.prevent="onEnter"
-        @keydown.enter.shift.prevent="emit('find-prev')"
-        @keydown.esc.prevent="emit('close')"
-      />
-      <span class="search-count">{{ countLabel }}</span>
-      <button class="search-icon-btn" :disabled="!total" :title="$t('search.prev')" @click="emit('find-prev')">
-        <IconChevronUp :size="14" />
-      </button>
-      <button class="search-icon-btn" :disabled="!total" :title="$t('search.next')" @click="emit('find-next')">
-        <IconChevronDown :size="14" />
-      </button>
-      <button
-        class="search-icon-btn is-text"
-        :class="{ 'is-active': caseSensitive }"
-        :title="$t('search.caseSensitive')"
-        @click="toggleCase"
-      >
-        Aa
-      </button>
-      <button
-        class="search-icon-btn is-text"
-        :class="{ 'is-active': showReplace }"
-        :title="$t('search.toggleReplace')"
-        @click="toggleReplace"
-      >
-        <IconSwapArrows :size="14" />
-      </button>
-      <button class="search-icon-btn" :title="$t('common.close')" @click="emit('close')">
-        <IconClose :size="14" />
-      </button>
-    </div>
-    <div v-if="showReplace" class="search-row replace-row">
-      <span class="search-icon" aria-hidden="true">
-        <IconReplace :size="14" />
-      </span>
-      <input
-        v-model="replacement"
-        class="search-input"
-        type="text"
-        spellcheck="false"
-        :placeholder="$t('search.replacePlaceholder')"
-        @keydown.enter.prevent="onReplace"
-        @keydown.esc.prevent="emit('close')"
-      />
-      <button class="search-action" :disabled="!total" @click="onReplace">{{ $t('search.replace') }}</button>
-      <button class="search-action" :disabled="!total" @click="onReplaceAll">{{ $t('search.replaceAll') }}</button>
-    </div>
-  </div>
-</template>
 
 <style scoped>
 .search-bar {

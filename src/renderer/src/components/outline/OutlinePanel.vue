@@ -1,3 +1,34 @@
+<template>
+  <aside class="outline-panel" :style="{ width: settings.outlineWidth + 'px' }">
+    <div class="outline-header">
+      <span class="outline-header-title">{{ $t('outline.title') }}</span>
+      <button class="outline-collapse" :title="$t('outline.collapse')" @click="settings.toggleOutline()">
+        <IconChevronRight :size="16" />
+      </button>
+    </div>
+    <div ref="bodyRef" class="outline-body">
+      <template v-if="visibleItems.length > 0">
+        <div
+          v-for="item in visibleItems"
+          :key="item.id"
+          class="outline-item"
+          :class="[`is-h${item.level}`, { 'is-active': item.id === activeId }]"
+          :style="{ paddingLeft: levelIndent(item.level) }"
+          :title="item.text"
+          @click="emit('jump', item)"
+        >
+          <span class="outline-marker">H{{ item.level }}</span>
+          <span class="outline-text">{{ item.text || $t('outline.emptyTitle') }}</span>
+        </div>
+      </template>
+      <div v-else class="outline-empty">
+        {{ $t(hasDocument ? 'outline.empty1' : 'outline.noDocument') }}<br />
+        {{ $t(hasDocument ? 'outline.empty2' : 'outline.noDocumentHint') }}
+      </div>
+    </div>
+  </aside>
+</template>
+
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
 import type { OutlineItem } from '@shared/types'
@@ -35,37 +66,6 @@ watch(
   },
 )
 </script>
-
-<template>
-  <aside class="outline-panel" :style="{ width: settings.outlineWidth + 'px' }">
-    <div class="outline-header">
-      <span class="outline-header-title">{{ $t('outline.title') }}</span>
-      <button class="outline-collapse" :title="$t('outline.collapse')" @click="settings.toggleOutline()">
-        <IconChevronRight :size="16" />
-      </button>
-    </div>
-    <div ref="bodyRef" class="outline-body">
-      <template v-if="visibleItems.length > 0">
-        <div
-          v-for="item in visibleItems"
-          :key="item.id"
-          class="outline-item"
-          :class="[`is-h${item.level}`, { 'is-active': item.id === activeId }]"
-          :style="{ paddingLeft: levelIndent(item.level) }"
-          :title="item.text"
-          @click="emit('jump', item)"
-        >
-          <span class="outline-marker">H{{ item.level }}</span>
-          <span class="outline-text">{{ item.text || $t('outline.emptyTitle') }}</span>
-        </div>
-      </template>
-      <div v-else class="outline-empty">
-        {{ $t(hasDocument ? 'outline.empty1' : 'outline.noDocument') }}<br />
-        {{ $t(hasDocument ? 'outline.empty2' : 'outline.noDocumentHint') }}
-      </div>
-    </div>
-  </aside>
-</template>
 
 <style scoped>
 .outline-panel {
