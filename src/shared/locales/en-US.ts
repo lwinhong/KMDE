@@ -109,6 +109,10 @@ export default {
     tip2: 'Ctrl+P Quick Open · Ctrl+/ Cycle Editor Mode · Ctrl+Shift+P Command Palette',
     tip3: 'You can also drag .md files directly into the window'
   },
+  drop: {
+    title: 'Drop to open in KMDE',
+    subtitle: 'Supports .md / .markdown / .mdown / .txt'
+  },
   tabbar: {
     deleted: '(deleted)',
     newFile: 'New File (Ctrl+N)',

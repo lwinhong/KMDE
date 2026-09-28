@@ -107,6 +107,10 @@ export default {
     tip2: 'Ctrl+P 快速打开文件 · Ctrl+/ 循环切换编辑模式 · Ctrl+Shift+P 命令面板',
     tip3: '也可以直接把 .md 文件拖入窗口'
   },
+  drop: {
+    title: '释放以在 KMDE 中打开',
+    subtitle: '支持 .md / .markdown / .mdown / .txt'
+  },
   tabbar: {
     deleted: '(已删除)',
     newFile: '新建文件 (Ctrl+N)',

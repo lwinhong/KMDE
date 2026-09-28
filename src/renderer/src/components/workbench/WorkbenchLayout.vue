@@ -1,5 +1,5 @@
 <template>
-  <div class="workbench" @dragover.prevent @drop.prevent="handleDrop">
+  <div class="workbench" @dragenter="onDragEnter" @dragleave="onDragLeave" @dragover="onDragOver" @drop.prevent="handleDrop">
     <TitleBar @command="runCommand" @request-close="requestCloseApp()" />
     <TabBar
       v-if="tabs.activeTab"
@@ -56,6 +56,16 @@
     <ConflictDialog />
     <ExportDialog ref="exportRef" />
     <AboutDialog ref="aboutRef" />
+    <Teleport to="body">
+      <!-- 纯视觉提示层：pointer-events: none，不改变任何现有拖放目标（编辑器内图片拖入等不受影响） -->
+      <div v-if="dropHintVisible" class="drop-overlay" aria-hidden="true">
+        <div class="drop-card">
+          <IconFileDown class="drop-card-icon" :size="42" :stroke-width="1.5" />
+          <div class="drop-card-title">{{ t('drop.title') }}</div>
+          <div class="drop-card-subtitle">{{ t('drop.subtitle') }}</div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -80,6 +90,7 @@ import ConflictDialog from '../conflict/ConflictDialog.vue'
 import ExportDialog from '../export/ExportDialog.vue'
 import AboutDialog from './AboutDialog.vue'
 import Resizer from './Resizer.vue'
+import { IconFileDown } from '../icons'
 
 const settings = useSettingsStore()
 const tabs = useTabsStore()
@@ -447,7 +458,36 @@ async function handleFsEvent(ev: FsEvent): Promise<void> {
   }
 }
 
+// ---------------- 拖入文件提示 ----------------
+// 仅对来自系统文件管理器的拖拽生效（dataTransfer 含 Files）；
+// 编辑器内部的文本/图片拖拽不会触发。
+const dropHintVisible = shallowRef(false)
+let dragDepth = 0
+
+function isFileDrag(e: DragEvent): boolean {
+  return e.dataTransfer?.types.includes('Files') ?? false
+}
+
+function onDragEnter(e: DragEvent): void {
+  if (!isFileDrag(e)) return
+  dragDepth++
+  dropHintVisible.value = true
+}
+
+function onDragLeave(e: DragEvent): void {
+  if (!isFileDrag(e) || dragDepth === 0) return
+  dragDepth--
+  if (dragDepth === 0) dropHintVisible.value = false
+}
+
+function onDragOver(e: DragEvent): void {
+  e.preventDefault()
+  if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy'
+}
+
 function handleDrop(e: DragEvent): void {
+  dragDepth = 0
+  dropHintVisible.value = false
   const files = e.dataTransfer?.files
   if (!files || files.length === 0) return
   for (let i = 0; i < Math.min(files.length, 5); i++) {
@@ -538,5 +578,58 @@ function onOutlineResize(delta: number): void {
   align-items: center;
   justify-content: center;
   color: var(--kme-text-3);
+}
+
+.drop-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.32);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  pointer-events: none;
+  animation: drop-overlay-in 0.12s ease-out;
+}
+
+.drop-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 42px 72px;
+  background: var(--kme-bg);
+  border: 2px dashed var(--kme-primary);
+  border-radius: 16px;
+  box-shadow: var(--kme-shadow-sm);
+  animation: drop-card-in 0.14s ease-out;
+}
+
+.drop-card-icon {
+  color: var(--kme-primary);
+  margin-bottom: 14px;
+}
+
+.drop-card-title {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--kme-text-1);
+}
+
+.drop-card-subtitle {
+  margin-top: 6px;
+  font-size: 12.5px;
+  color: var(--kme-text-3);
+}
+
+@keyframes drop-overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes drop-card-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
 }
 </style>
