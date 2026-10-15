@@ -6,6 +6,10 @@
    ============================================================ */
 
 :root {
+  /* 字体：所见即所得与源码编辑器共用，保证两侧字形一致 */
+  --kme-font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
+    'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+
   /* 主色（Trae 紫） */
   --kme-primary: #6366f1;
   --kme-primary-hover: #818cf8;
@@ -155,8 +159,7 @@ body {
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB',
-    'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-family: var(--kme-font-ui);
   font-size: 14px;
   color: var(--kme-text-1);
   background: var(--kme-bg);

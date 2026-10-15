@@ -94,7 +94,7 @@ const kmdeCmTheme = EditorView.theme({
     color: 'var(--kme-text-1)'
   },
   '.cm-scroller': {
-    fontFamily: "'JetBrains Mono', 'Fira Code', Consolas, 'Courier New', monospace",
+    fontFamily: 'var(--kme-font-ui)',
     lineHeight: '1.7'
   },
   '.cm-content': {
@@ -109,8 +109,9 @@ const kmdeCmTheme = EditorView.theme({
   '&.cm-focused': { outline: 'none' },
   '.cm-activeLine': { backgroundColor: 'var(--kme-bg-hover)' },
   '.cm-activeLineGutter': { backgroundColor: 'var(--kme-bg-hover)', color: 'var(--kme-text-1)' },
-  '.cm-selectionBackground, ::selection': { backgroundColor: 'var(--kme-selection)' },
-  '&.cm-focused .cm-selectionBackground': { backgroundColor: 'var(--kme-selection)' },
+  '.cm-selectionBackground, ::selection': { backgroundColor: 'var(--kme-selection) !important' },
+  '&.cm-focused .cm-selectionBackground': { backgroundColor: 'var(--kme-selection) !important' },
+  '&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground': { backgroundColor: 'var(--kme-selection) !important' },
   '.cm-cursor': { borderLeftColor: 'var(--kme-primary)' },
   '.cm-searchMatch': { backgroundColor: 'var(--kme-search-match)' },
   '.cm-searchMatch.cm-searchMatch-selected': { backgroundColor: 'var(--kme-search-match-active)' }
