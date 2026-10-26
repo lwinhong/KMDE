@@ -89,8 +89,16 @@
 /* List styles */
 .notion-editor-prosemirror ul,
 .notion-editor-prosemirror ol {
-  padding: 0 1rem;
+  /* 只缩进起始侧：嵌套 ul/ol 的 padding 会逐层累加，子列表不会与父级对齐 */
+  padding-inline-start: 1.5rem;
   margin: 0.5rem 0;
+}
+
+/* 嵌套层级在父 li 文本基础上再缩进一层 */
+.notion-editor-prosemirror li > ul,
+.notion-editor-prosemirror li > ol {
+  padding-inline-start: 1.5rem;
+  margin: 0.15rem 0;
 }
 
 .notion-editor-prosemirror li p {
